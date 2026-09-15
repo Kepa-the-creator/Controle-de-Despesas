@@ -60,28 +60,38 @@ Validar:
 - `http://IP-DA-VPS:8080` → app carregando
 - `http://IP-DA-VPS:8090/_/` → painel admin do PocketBase, com os dados migrados
 
-## Fase 2 — quando o domínio estiver pronto
+## Fase 2 — domínio grátis via DuckDNS + HTTPS
 
-1. Configure dois registros DNS tipo A apontando para o IP da VPS:
-   - `app.seudominio.com`
-   - `pb.seudominio.com`
-2. Em `.env.production`, preencha `DOMAIN=seudominio.com` e troque
-   `PUBLIC_POCKETBASE_URL` para `https://pb.seudominio.com`.
-3. Suba o Caddy junto e reconstrua o frontend (para embutir a nova URL):
+1. Crie uma conta grátis em https://www.duckdns.org (login com GitHub/Google).
+2. Cadastre **dois** nomes (o free tier permite até 5), ambos apontando para o
+   IP público da VPS, ex:
+   - `controledespesas.duckdns.org` → frontend
+   - `controledespesas-pb.duckdns.org` → PocketBase
+3. Em `.env.production`, preencha:
+   ```
+   FRONTEND_HOST=controledespesas.duckdns.org
+   PB_HOST=controledespesas-pb.duckdns.org
+   PUBLIC_POCKETBASE_URL=https://controledespesas-pb.duckdns.org
+   ```
+4. Suba o Caddy junto e reconstrua o frontend (para embutir a nova URL):
 
 ```bash
 docker compose --env-file .env.production --profile https up -d --build
 ```
 
-4. Acompanhe a emissão do certificado:
+5. Acompanhe a emissão do certificado:
 
 ```bash
 docker compose logs -f caddy
 ```
 
-5. A partir daí o app fica em `https://app.seudominio.com` e o PocketBase em
-   `https://pb.seudominio.com`. As portas 8080/8090 continuam abertas por
-   trás — se quiser, feche-as no firewall e deixe só 80/443 públicas.
+6. A partir daí o app fica em `https://controledespesas.duckdns.org` e o
+   PocketBase em `https://controledespesas-pb.duckdns.org`. As portas
+   8080/8090 continuam abertas por trás — se quiser, feche-as no firewall e
+   deixe só 80/443 públicas.
+
+> Se o IP da VPS mudar no futuro, atualize o IP nos dois nomes no painel do
+> DuckDNS (ou configure o script de auto-update deles).
 
 ## Desligar o Coolify
 

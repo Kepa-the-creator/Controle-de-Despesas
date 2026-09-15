@@ -1,7 +1,7 @@
-app.{$DOMAIN} {
+{$FRONTEND_HOST} {
     reverse_proxy frontend:80
 }
 
-pb.{$DOMAIN} {
+{$PB_HOST} {
     reverse_proxy pocketbase:8090
 }

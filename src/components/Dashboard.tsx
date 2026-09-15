@@ -97,6 +97,7 @@ export function Dashboard() {
         category,
         paymentMethod,
         date,
+        user: pb.authStore.record?.id,
       });
 
       setIsModalOpen(false);

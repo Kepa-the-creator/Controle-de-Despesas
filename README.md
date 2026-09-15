@@ -1,3 +1,8 @@
+## Deploy
+
+Instruções para rodar em VPS com Docker Compose (frontend + PocketBase + Caddy
+com HTTPS automático) em [DEPLOY.md](DEPLOY.md).
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

@@ -1,0 +1,7 @@
+app.{$DOMAIN} {
+    reverse_proxy frontend:80
+}
+
+pb.{$DOMAIN} {
+    reverse_proxy pocketbase:8090
+}

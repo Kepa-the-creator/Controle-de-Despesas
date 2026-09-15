@@ -6,8 +6,6 @@ services:
       args:
         VITE_POCKETBASE_URL: ${PUBLIC_POCKETBASE_URL}
     restart: unless-stopped
-    ports:
-      - "8080:80"
 
   pocketbase:
     build:
@@ -15,8 +13,6 @@ services:
       args:
         PB_VERSION: ${PB_VERSION:-0.28.2}
     restart: unless-stopped
-    ports:
-      - "8090:8090"
     volumes:
       - pb_data:/pb/pb_data
 

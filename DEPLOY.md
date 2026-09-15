@@ -86,9 +86,14 @@ docker compose logs -f caddy
 ```
 
 6. A partir daí o app fica em `https://controledespesas.duckdns.org` e o
-   PocketBase em `https://controledespesas-pb.duckdns.org`. As portas
-   8080/8090 continuam abertas por trás — se quiser, feche-as no firewall e
-   deixe só 80/443 públicas.
+   PocketBase em `https://controledespesas-pb.duckdns.org`.
+
+> `docker-compose.yml` não publica mais as portas 8080/8090 no host — só o
+> Caddy (80/443) fica exposto, e ele fala com os outros containers pela rede
+> interna do Docker. Isso é o estado final esperado; a publicação em
+> 8080/8090 (mostrada na Fase 1) só existe até o domínio estar pronto. Para
+> depurar via IP direto temporariamente, adicione de volta `ports:
+> ["8080:80"]` / `["8090:8090"]` nos respectivos serviços.
 
 > Se o IP da VPS mudar no futuro, atualize o IP nos dois nomes no painel do
 > DuckDNS (ou configure o script de auto-update deles).

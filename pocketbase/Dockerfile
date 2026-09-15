@@ -4,8 +4,12 @@ ARG PB_VERSION=0.28.2
 
 RUN apk add --no-cache unzip ca-certificates
 
+WORKDIR /pb
+
 ADD https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip /tmp/pb.zip
 RUN unzip /tmp/pb.zip -d /pb && rm /tmp/pb.zip
+
+COPY pb_migrations /pb/pb_migrations
 
 EXPOSE 8090
 

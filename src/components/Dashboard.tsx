@@ -145,7 +145,7 @@ export function Dashboard() {
 
     (async () => {
       try {
-        let records = await pb.collection('accounts').getFullList<Account>({ sort: 'created' });
+        let records = await pb.collection('accounts').getFullList<Account>();
         if (records.length === 0) {
           const contaCorrente = await pb.collection('accounts').create<Account>({
             name: 'Conta Corrente',

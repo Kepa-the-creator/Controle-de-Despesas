@@ -138,13 +138,29 @@ export function Dashboard() {
     };
   }, []);
 
-  // Busca as contas do usuário
+  // Busca as contas do usuário; na primeira vez (sem nenhuma conta), cria
+  // "Conta Corrente" e "Cartão de Crédito" automaticamente
   useEffect(() => {
     let active = true;
 
     (async () => {
       try {
-        const records = await pb.collection('accounts').getFullList<Account>({ sort: 'created' });
+        let records = await pb.collection('accounts').getFullList<Account>({ sort: 'created' });
+        if (records.length === 0) {
+          const contaCorrente = await pb.collection('accounts').create<Account>({
+            name: 'Conta Corrente',
+            initialBalance: 0,
+            active: true,
+            user: pb.authStore.record?.id,
+          });
+          const cartaoCredito = await pb.collection('accounts').create<Account>({
+            name: 'Cartão de Crédito',
+            initialBalance: 0,
+            active: true,
+            user: pb.authStore.record?.id,
+          });
+          records = [contaCorrente, cartaoCredito];
+        }
         if (active) setAccounts(records);
       } catch (err: any) {
         console.error('Erro ao buscar contas:', err.message);
@@ -861,7 +877,13 @@ export function Dashboard() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormMode('income')}
+                  onClick={() => {
+                    setFormMode('income');
+                    if (!editingId) {
+                      const contaCorrente = accounts.find((a) => a.name === 'Conta Corrente');
+                      if (contaCorrente) setAccountId(contaCorrente.id);
+                    }
+                  }}
                   className={`py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     formMode === 'income' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
                   }`}

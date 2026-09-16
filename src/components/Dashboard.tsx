@@ -14,6 +14,7 @@ import {
   Target,
   Landmark,
   ArrowRightLeft,
+  HelpCircle,
 } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import { useAuth } from '../hooks/useAuth';
@@ -23,6 +24,7 @@ import { MonthlyTrend } from './MonthlyTrend';
 import { CategoryBudgets, type CategoryBudget } from './CategoryBudgets';
 import { SavingsGoals, type SavingsGoal } from './SavingsGoals';
 import { Accounts, type Account } from './Accounts';
+import { HelpModal } from './HelpModal';
 import { addMonthsClamped, daysInMonth } from '../lib/date';
 
 export interface Transaction {
@@ -64,6 +66,7 @@ export function Dashboard() {
   const [isSavingsGoalsOpen, setIsSavingsGoalsOpen] = useState(false);
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
   const [isAccountsOpen, setIsAccountsOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
@@ -596,6 +599,14 @@ export function Dashboard() {
             </button>
 
             <button
+              onClick={() => setIsHelpOpen(true)}
+              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+              title="Ajuda"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+
+            <button
               onClick={logout}
               className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
               title="Sair"
@@ -1077,6 +1088,8 @@ export function Dashboard() {
           onClose={() => setIsSavingsGoalsOpen(false)}
         />
       )}
+
+      {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} />}
     </div>
   );
 }

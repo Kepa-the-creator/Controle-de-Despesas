@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Plus, Trash2, Landmark, X } from 'lucide-react';
+import { Plus, Trash2, Landmark, X, Pencil, Check } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 
 export interface Account {
@@ -35,6 +35,9 @@ const formatCurrency = (val: number) =>
 export function Accounts({ accounts, onChange, transactions, transfers, onClose }: AccountsProps) {
   const [name, setName] = useState('');
   const [initialBalance, setInitialBalance] = useState('0');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingInitialBalance, setEditingInitialBalance] = useState('0');
 
   const balanceFor = (accountId: string, base: number) => {
     let total = base;
@@ -86,6 +89,26 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
     }
   };
 
+  const startEditing = (acc: Account) => {
+    setEditingId(acc.id);
+    setEditingName(acc.name);
+    setEditingInitialBalance(String(acc.initialBalance || 0));
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    if (!editingName) return;
+    try {
+      const newInitialBalance = parseFloat(editingInitialBalance) || 0;
+      await pb.collection('accounts').update(id, { name: editingName, initialBalance: newInitialBalance });
+      onChange(
+        accounts.map((a) => (a.id === id ? { ...a, name: editingName, initialBalance: newInitialBalance } : a))
+      );
+      setEditingId(null);
+    } catch (err: any) {
+      alert('Erro ao renomear conta: ' + err.message);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
@@ -105,38 +128,85 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
           {accounts.length === 0 ? (
             <p className="text-sm text-slate-500 text-center py-4">Nenhuma conta cadastrada.</p>
           ) : (
-            accounts.map((acc) => (
-              <div
-                key={acc.id}
-                className="flex items-center justify-between gap-3 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{acc.name}</p>
-                  <p className="text-xs text-slate-500">
-                    Saldo: {formatCurrency(balanceFor(acc.id, acc.initialBalance || 0))}
-                  </p>
+            accounts.map((acc) =>
+              editingId === acc.id ? (
+                <div
+                  key={acc.id}
+                  className="bg-slate-950 border border-blue-500/50 rounded-xl px-4 py-2.5 space-y-2"
+                >
+                  <input
+                    type="text"
+                    autoFocus
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editingInitialBalance}
+                      onChange={(e) => setEditingInitialBalance(e.target.value)}
+                      placeholder="Saldo inicial"
+                      className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSaveEdit(acc.id)}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white cursor-pointer flex items-center gap-1"
+                    >
+                      <Check className="w-3.5 h-3.5" /> Salvar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(null)}
+                      className="px-2 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleActive(acc)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                      acc.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'
-                    }`}
-                  >
-                    {acc.active ? 'Ativa' : 'Inativa'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(acc.id)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                    title="Excluir"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+              ) : (
+                <div
+                  key={acc.id}
+                  className="flex items-center justify-between gap-3 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{acc.name}</p>
+                    <p className="text-xs text-slate-500">
+                      Saldo: {formatCurrency(balanceFor(acc.id, acc.initialBalance || 0))}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleActive(acc)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                        acc.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'
+                      }`}
+                    >
+                      {acc.active ? 'Ativa' : 'Inativa'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => startEditing(acc)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                      title="Renomear"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(acc.id)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                      title="Excluir"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
+              )
+            )
           )}
         </div>
 

@@ -8,10 +8,13 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Repeat,
 } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import { useAuth } from '../hooks/useAuth';
 import { CategoryChart } from './CategoryChart';
+import { FixedExpenses, type FixedExpense } from './FixedExpenses';
+import { addMonthsClamped, daysInMonth } from '../lib/date';
 
 export interface Transaction {
   id: string;
@@ -21,6 +24,10 @@ export interface Transaction {
   category: string;
   paymentMethod: 'pix' | 'credit_card' | 'debit_card' | 'cash';
   date: string;
+  installmentGroup?: string;
+  installmentIndex?: number;
+  installmentTotal?: number;
+  recurringSource?: string;
 }
 
 const sortByDateDesc = (list: Transaction[]) =>
@@ -31,6 +38,8 @@ export function Dashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFixedExpensesOpen, setIsFixedExpensesOpen] = useState(false);
+  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
@@ -43,6 +52,8 @@ export function Dashboard() {
   const [category, setCategory] = useState('Alimentação');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card' | 'debit_card' | 'cash'>('pix');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isInstallment, setIsInstallment] = useState(false);
+  const [installmentCount, setInstallmentCount] = useState('2');
 
   // Busca inicial + assinatura em tempo real (SSE) no PocketBase
   useEffect(() => {
@@ -84,26 +95,111 @@ export function Dashboard() {
     };
   }, []);
 
+  // Busca as despesas fixas do usuário (usadas para gerar lançamentos automáticos)
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      try {
+        const records = await pb.collection('fixed_expenses').getFullList<FixedExpense>();
+        if (active) setFixedExpenses(records);
+      } catch (err: any) {
+        console.error('Erro ao buscar despesas fixas:', err.message);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [isFixedExpensesOpen]);
+
+  // Gera automaticamente, para o mês visualizado (se já chegou ou já passou),
+  // a transação de cada despesa fixa ativa que ainda não tem lançamento nesse mês.
+  useEffect(() => {
+    const now = new Date();
+    const isPastOrCurrentMonth =
+      cursor.year < now.getFullYear() ||
+      (cursor.year === now.getFullYear() && cursor.month <= now.getMonth());
+    if (!isPastOrCurrentMonth) return;
+
+    const pending = fixedExpenses.filter((fe) => {
+      if (!fe.active) return false;
+      return !transactions.some(
+        (t) =>
+          t.recurringSource === fe.id &&
+          t.date.startsWith(`${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}`)
+      );
+    });
+    if (pending.length === 0) return;
+
+    (async () => {
+      for (const fe of pending) {
+        const day = Math.min(fe.dayOfMonth, daysInMonth(cursor.year, cursor.month));
+        const targetDate = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        try {
+          await pb.collection('transactions').create({
+            description: fe.description,
+            amount: fe.amount,
+            type: 'expense',
+            category: fe.category,
+            paymentMethod: fe.paymentMethod,
+            date: targetDate,
+            user: pb.authStore.record?.id,
+            recurringSource: fe.id,
+          });
+        } catch (err: any) {
+          console.error('Erro ao gerar despesa fixa:', err.message);
+        }
+      }
+    })();
+  }, [cursor, fixedExpenses, transactions]);
+
   // Cadastrar no banco (o estado é atualizado via assinatura em tempo real)
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description || !amount) return;
 
+    const totalAmount = parseFloat(amount);
+    const installments = isInstallment ? Math.max(2, parseInt(installmentCount, 10) || 2) : 1;
+
     try {
-      await pb.collection('transactions').create({
-        description,
-        amount: parseFloat(amount),
-        type,
-        category,
-        paymentMethod,
-        date,
-        user: pb.authStore.record?.id,
-      });
+      if (installments === 1) {
+        await pb.collection('transactions').create({
+          description,
+          amount: totalAmount,
+          type,
+          category,
+          paymentMethod,
+          date,
+          user: pb.authStore.record?.id,
+        });
+      } else {
+        const installmentGroup = crypto.randomUUID();
+        const baseValue = Math.floor((totalAmount / installments) * 100) / 100;
+        const lastValue = Math.round((totalAmount - baseValue * (installments - 1)) * 100) / 100;
+
+        for (let i = 0; i < installments; i++) {
+          await pb.collection('transactions').create({
+            description,
+            amount: i === installments - 1 ? lastValue : baseValue,
+            type,
+            category,
+            paymentMethod,
+            date: addMonthsClamped(date, i),
+            user: pb.authStore.record?.id,
+            installmentGroup,
+            installmentIndex: i + 1,
+            installmentTotal: installments,
+          });
+        }
+      }
 
       setIsModalOpen(false);
       setDescription('');
       setAmount('');
       setType('expense');
+      setIsInstallment(false);
+      setInstallmentCount('2');
     } catch (err: any) {
       alert('Erro ao salvar no banco: ' + err.message);
     }
@@ -140,9 +236,18 @@ export function Dashboard() {
     });
   }, [transactions, cursor]);
 
+  // Saldo acumulado de todos os meses anteriores ao selecionado
+  const previousBalance = useMemo(() => {
+    const cursorStart = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}-01`;
+    return transactions.reduce((acc, t) => {
+      if (t.date >= cursorStart) return acc;
+      return acc + (t.type === 'income' ? Number(t.amount) : -Number(t.amount));
+    }, 0);
+  }, [transactions, cursor]);
+
   // Cálculos de Resumo (referentes ao mês selecionado)
   const summary = useMemo(() => {
-    return monthTransactions.reduce(
+    const totals = monthTransactions.reduce(
       (acc, t) => {
         const val = Number(t.amount);
         if (t.type === 'income') {
@@ -150,12 +255,15 @@ export function Dashboard() {
         } else {
           acc.expense += val;
         }
-        acc.balance = acc.income - acc.expense;
         return acc;
       },
-      { income: 0, expense: 0, balance: 0 }
+      { income: 0, expense: 0 }
     );
-  }, [monthTransactions]);
+    return {
+      ...totals,
+      balance: totals.income - totals.expense + previousBalance,
+    };
+  }, [monthTransactions, previousBalance]);
 
   const filteredTransactions = useMemo(() => {
     if (filterType === 'all') return monthTransactions;
@@ -209,6 +317,14 @@ export function Dashboard() {
             </div>
 
             <button
+              onClick={() => setIsFixedExpensesOpen(true)}
+              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+              title="Despesas fixas"
+            >
+              <Repeat className="w-5 h-5" />
+            </button>
+
+            <button
               onClick={() => setIsModalOpen(true)}
               className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all active:scale-95 cursor-pointer"
             >
@@ -227,7 +343,7 @@ export function Dashboard() {
         </header>
 
         {/* Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-slate-400">Receitas</span>
@@ -246,6 +362,18 @@ export function Dashboard() {
               </div>
             </div>
             <p className="text-3xl font-bold text-white mt-4">{formatCurrency(summary.expense)}</p>
+          </div>
+
+          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-slate-400">Saldo Anterior</span>
+              <div className={`p-2 rounded-lg ${previousBalance >= 0 ? 'bg-blue-500/10 text-blue-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                <Repeat className="w-5 h-5" />
+              </div>
+            </div>
+            <p className={`text-3xl font-bold mt-4 ${previousBalance >= 0 ? 'text-white' : 'text-rose-400'}`}>
+              {formatCurrency(previousBalance)}
+            </p>
           </div>
 
           <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-sm">
@@ -316,7 +444,14 @@ export function Dashboard() {
                   ) : (
                     filteredTransactions.map((tx) => (
                       <tr key={tx.id} className="hover:bg-slate-800/20 transition-colors">
-                        <td className="py-4 px-6 font-medium text-white">{tx.description}</td>
+                        <td className="py-4 px-6 font-medium text-white">
+                          {tx.description}
+                          {tx.installmentTotal && (
+                            <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] rounded bg-slate-800 text-slate-400 border border-slate-700/50 align-middle">
+                              {tx.installmentIndex}/{tx.installmentTotal}
+                            </span>
+                          )}
+                        </td>
                         <td className="py-4 px-6">
                           <span className="inline-block px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-300 border border-slate-700/50">
                             {tx.category}
@@ -418,6 +553,31 @@ export function Dashboard() {
                 </div>
               </div>
 
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isInstallment}
+                    onChange={(e) => setIsInstallment(e.target.checked)}
+                    className="rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500"
+                  />
+                  Compra parcelada?
+                </label>
+                {isInstallment && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={2}
+                      required
+                      value={installmentCount}
+                      onChange={(e) => setInstallmentCount(e.target.value)}
+                      className="w-20 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                    />
+                    <span className="text-xs text-slate-500">parcelas</span>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1">Categoria</label>
@@ -468,6 +628,14 @@ export function Dashboard() {
             </form>
           </div>
         </div>
+      )}
+
+      {isFixedExpensesOpen && (
+        <FixedExpenses
+          fixedExpenses={fixedExpenses}
+          onChange={setFixedExpenses}
+          onClose={() => setIsFixedExpensesOpen(false)}
+        />
       )}
     </div>
   );

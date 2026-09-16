@@ -295,7 +295,7 @@ export function Dashboard() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1 bg-slate-900/60 border border-slate-800/80 rounded-xl px-1 py-1">
               <button
                 onClick={goPrevMonth}
@@ -329,7 +329,7 @@ export function Dashboard() {
               className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-5 h-5" />
-              Nova Transação
+              <span className="hidden sm:inline">Nova Transação</span>
             </button>
 
             <button

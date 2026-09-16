@@ -10,12 +10,16 @@ import {
   LogOut,
   Repeat,
   Pencil,
+  Gauge,
+  Target,
 } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import { useAuth } from '../hooks/useAuth';
 import { CategoryChart } from './CategoryChart';
 import { FixedExpenses, type FixedExpense } from './FixedExpenses';
 import { MonthlyTrend } from './MonthlyTrend';
+import { CategoryBudgets, type CategoryBudget } from './CategoryBudgets';
+import { SavingsGoals, type SavingsGoal } from './SavingsGoals';
 import { addMonthsClamped, daysInMonth } from '../lib/date';
 
 export interface Transaction {
@@ -42,6 +46,10 @@ export function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFixedExpensesOpen, setIsFixedExpensesOpen] = useState(false);
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
+  const [isCategoryBudgetsOpen, setIsCategoryBudgetsOpen] = useState(false);
+  const [categoryBudgets, setCategoryBudgets] = useState<CategoryBudget[]>([]);
+  const [isSavingsGoalsOpen, setIsSavingsGoalsOpen] = useState(false);
+  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
@@ -115,6 +123,42 @@ export function Dashboard() {
       active = false;
     };
   }, [isFixedExpensesOpen]);
+
+  // Busca os limites de orçamento por categoria
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      try {
+        const records = await pb.collection('category_budgets').getFullList<CategoryBudget>();
+        if (active) setCategoryBudgets(records);
+      } catch (err: any) {
+        console.error('Erro ao buscar orçamentos:', err.message);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [isCategoryBudgetsOpen]);
+
+  // Busca as metas de economia
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      try {
+        const records = await pb.collection('savings_goals').getFullList<SavingsGoal>();
+        if (active) setSavingsGoals(records);
+      } catch (err: any) {
+        console.error('Erro ao buscar metas:', err.message);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [isSavingsGoalsOpen]);
 
   // Gera automaticamente, para o mês visualizado (se já chegou ou já passou),
   // a transação de cada despesa fixa ativa que ainda não tem lançamento nesse mês.
@@ -363,6 +407,22 @@ export function Dashboard() {
               title="Despesas fixas"
             >
               <Repeat className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={() => setIsCategoryBudgetsOpen(true)}
+              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+              title="Orçamento por categoria"
+            >
+              <Gauge className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={() => setIsSavingsGoalsOpen(true)}
+              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+              title="Metas de economia"
+            >
+              <Target className="w-5 h-5" />
             </button>
 
             <button
@@ -748,6 +808,24 @@ export function Dashboard() {
           fixedExpenses={fixedExpenses}
           onChange={setFixedExpenses}
           onClose={() => setIsFixedExpensesOpen(false)}
+        />
+      )}
+
+      {isCategoryBudgetsOpen && (
+        <CategoryBudgets
+          budgets={categoryBudgets}
+          onChange={setCategoryBudgets}
+          monthTransactions={monthTransactions}
+          onClose={() => setIsCategoryBudgetsOpen(false)}
+        />
+      )}
+
+      {isSavingsGoalsOpen && (
+        <SavingsGoals
+          goals={savingsGoals}
+          onChange={setSavingsGoals}
+          cursor={cursor}
+          onClose={() => setIsSavingsGoalsOpen(false)}
         />
       )}
     </div>

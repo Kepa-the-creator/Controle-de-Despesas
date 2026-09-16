@@ -10,24 +10,32 @@ export interface FixedExpense {
   paymentMethod?: 'pix' | 'credit_card' | 'debit_card' | 'cash';
   dayOfMonth: number;
   active: boolean;
+  account: string;
+}
+
+interface AccountOption {
+  id: string;
+  name: string;
 }
 
 interface FixedExpensesProps {
   fixedExpenses: FixedExpense[];
   onChange: (list: FixedExpense[]) => void;
+  accounts: AccountOption[];
   onClose: () => void;
 }
 
-export function FixedExpenses({ fixedExpenses, onChange, onClose }: FixedExpensesProps) {
+export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: FixedExpensesProps) {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Moradia');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card' | 'debit_card' | 'cash'>('pix');
   const [dayOfMonth, setDayOfMonth] = useState('5');
+  const [accountId, setAccountId] = useState(accounts[0]?.id ?? '');
 
   const handleAdd = async (e: FormEvent) => {
     e.preventDefault();
-    if (!description || !amount) return;
+    if (!description || !amount || !accountId) return;
 
     try {
       const record = await pb.collection('fixed_expenses').create<FixedExpense>({
@@ -37,6 +45,7 @@ export function FixedExpenses({ fixedExpenses, onChange, onClose }: FixedExpense
         paymentMethod,
         dayOfMonth: Math.min(31, Math.max(1, parseInt(dayOfMonth, 10) || 1)),
         active: true,
+        account: accountId,
         user: pb.authStore.record?.id,
       });
       onChange([...fixedExpenses, record]);
@@ -96,7 +105,8 @@ export function FixedExpenses({ fixedExpenses, onChange, onClose }: FixedExpense
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-white truncate">{fe.description}</p>
                   <p className="text-xs text-slate-500">
-                    {formatCurrency(fe.amount)} · todo dia {fe.dayOfMonth} · {fe.category}
+                    {formatCurrency(fe.amount)} · todo dia {fe.dayOfMonth} · {fe.category} ·{' '}
+                    {accounts.find((a) => a.id === fe.account)?.name ?? '-'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -178,24 +188,42 @@ export function FixedExpenses({ fixedExpenses, onChange, onClose }: FixedExpense
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">Categoria</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="Alimentação">Alimentação</option>
-              <option value="Moradia">Moradia</option>
-              <option value="Lazer">Lazer</option>
-              <option value="Transporte">Transporte</option>
-              <option value="Outros">Outros</option>
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Categoria</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="Alimentação">Alimentação</option>
+                <option value="Moradia">Moradia</option>
+                <option value="Lazer">Lazer</option>
+                <option value="Transporte">Transporte</option>
+                <option value="Outros">Outros</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Conta</label>
+              <select
+                value={accountId}
+                required
+                onChange={(e) => setAccountId(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+              >
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <button
             type="submit"
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all active:scale-95 cursor-pointer"
+            disabled={!accountId}
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Adicionar despesa fixa
           </button>

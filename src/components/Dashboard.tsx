@@ -12,6 +12,8 @@ import {
   Pencil,
   Gauge,
   Target,
+  Landmark,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import { useAuth } from '../hooks/useAuth';
@@ -20,6 +22,7 @@ import { FixedExpenses, type FixedExpense } from './FixedExpenses';
 import { MonthlyTrend } from './MonthlyTrend';
 import { CategoryBudgets, type CategoryBudget } from './CategoryBudgets';
 import { SavingsGoals, type SavingsGoal } from './SavingsGoals';
+import { Accounts, type Account } from './Accounts';
 import { addMonthsClamped, daysInMonth } from '../lib/date';
 
 export interface Transaction {
@@ -30,10 +33,20 @@ export interface Transaction {
   category: string;
   paymentMethod: 'pix' | 'credit_card' | 'debit_card' | 'cash';
   date: string;
+  account: string;
   installmentGroup?: string;
   installmentIndex?: number;
   installmentTotal?: number;
   recurringSource?: string;
+}
+
+export interface Transfer {
+  id: string;
+  fromAccount: string;
+  toAccount: string;
+  amount: number;
+  date: string;
+  description?: string;
 }
 
 const sortByDateDesc = (list: Transaction[]) =>
@@ -50,6 +63,10 @@ export function Dashboard() {
   const [categoryBudgets, setCategoryBudgets] = useState<CategoryBudget[]>([]);
   const [isSavingsGoalsOpen, setIsSavingsGoalsOpen] = useState(false);
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
+  const [isAccountsOpen, setIsAccountsOpen] = useState(false);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
@@ -58,13 +75,25 @@ export function Dashboard() {
 
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [type, setType] = useState<'income' | 'expense'>('expense');
+  const [formMode, setFormMode] = useState<'income' | 'expense' | 'transfer'>('expense');
   const [category, setCategory] = useState('Alimentação');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card' | 'debit_card' | 'cash'>('pix');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [accountId, setAccountId] = useState('');
+  const [fromAccountId, setFromAccountId] = useState('');
+  const [toAccountId, setToAccountId] = useState('');
   const [isInstallment, setIsInstallment] = useState(false);
   const [installmentCount, setInstallmentCount] = useState('2');
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Preenche a conta padrão dos formulários assim que a lista carrega
+  useEffect(() => {
+    if (accounts.length === 0) return;
+    const defaultId = selectedAccountId !== 'all' ? selectedAccountId : accounts[0].id;
+    setAccountId((prev) => prev || defaultId);
+    setFromAccountId((prev) => prev || defaultId);
+    setToAccountId((prev) => prev || accounts[1]?.id || defaultId);
+  }, [accounts, selectedAccountId]);
 
   // Busca inicial + assinatura em tempo real (SSE) no PocketBase
   useEffect(() => {
@@ -103,6 +132,42 @@ export function Dashboard() {
     return () => {
       active = false;
       unsubscribePromise.then((unsubscribe) => unsubscribe());
+    };
+  }, []);
+
+  // Busca as contas do usuário
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      try {
+        const records = await pb.collection('accounts').getFullList<Account>({ sort: 'created' });
+        if (active) setAccounts(records);
+      } catch (err: any) {
+        console.error('Erro ao buscar contas:', err.message);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [isAccountsOpen]);
+
+  // Busca as transferências entre contas
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      try {
+        const records = await pb.collection('transfers').getFullList<Transfer>();
+        if (active) setTransfers(records);
+      } catch (err: any) {
+        console.error('Erro ao buscar transferências:', err.message);
+      }
+    })();
+
+    return () => {
+      active = false;
     };
   }, []);
 
@@ -191,6 +256,7 @@ export function Dashboard() {
             category: fe.category,
             paymentMethod: fe.paymentMethod,
             date: targetDate,
+            account: fe.account,
             user: pb.authStore.record?.id,
             recurringSource: fe.id,
           });
@@ -204,19 +270,21 @@ export function Dashboard() {
   // Cadastrar ou editar no banco (o estado é atualizado via assinatura em tempo real)
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description || !amount) return;
+    if (!amount) return;
 
     const totalAmount = parseFloat(amount);
 
     if (editingId) {
+      if (!description) return;
       try {
         await pb.collection('transactions').update(editingId, {
           description,
           amount: totalAmount,
-          type,
+          type: formMode === 'transfer' ? 'expense' : formMode,
           category,
           paymentMethod,
           date,
+          account: accountId,
         });
         closeModal();
       } catch (err: any) {
@@ -225,6 +293,29 @@ export function Dashboard() {
       return;
     }
 
+    if (formMode === 'transfer') {
+      if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) {
+        alert('Escolha duas contas diferentes para a transferência.');
+        return;
+      }
+      try {
+        const record = await pb.collection('transfers').create<Transfer>({
+          fromAccount: fromAccountId,
+          toAccount: toAccountId,
+          amount: totalAmount,
+          date,
+          description: description || undefined,
+          user: pb.authStore.record?.id,
+        });
+        setTransfers((prev) => [...prev, record]);
+        closeModal();
+      } catch (err: any) {
+        alert('Erro ao registrar transferência: ' + err.message);
+      }
+      return;
+    }
+
+    if (!description) return;
     const installments = isInstallment ? Math.max(2, parseInt(installmentCount, 10) || 2) : 1;
 
     try {
@@ -232,10 +323,11 @@ export function Dashboard() {
         await pb.collection('transactions').create({
           description,
           amount: totalAmount,
-          type,
+          type: formMode,
           category,
           paymentMethod,
           date,
+          account: accountId,
           user: pb.authStore.record?.id,
         });
       } else {
@@ -247,10 +339,11 @@ export function Dashboard() {
           await pb.collection('transactions').create({
             description,
             amount: i === installments - 1 ? lastValue : baseValue,
-            type,
+            type: formMode,
             category,
             paymentMethod,
             date: addMonthsClamped(date, i),
+            account: accountId,
             user: pb.authStore.record?.id,
             installmentGroup,
             installmentIndex: i + 1,
@@ -270,10 +363,13 @@ export function Dashboard() {
     setEditingId(null);
     setDescription('');
     setAmount('');
-    setType('expense');
+    setFormMode('expense');
     setCategory('Alimentação');
     setPaymentMethod('pix');
     setDate(new Date().toISOString().split('T')[0]);
+    setAccountId(selectedAccountId !== 'all' ? selectedAccountId : accounts[0]?.id ?? '');
+    setFromAccountId('');
+    setToAccountId('');
     setIsInstallment(false);
     setInstallmentCount('2');
   };
@@ -282,10 +378,11 @@ export function Dashboard() {
     setEditingId(tx.id);
     setDescription(tx.description);
     setAmount(String(tx.amount));
-    setType(tx.type);
+    setFormMode(tx.type);
     setCategory(tx.category);
     setPaymentMethod(tx.paymentMethod);
     setDate(tx.date.slice(0, 10));
+    setAccountId(tx.account);
     setIsInstallment(false);
     setIsModalOpen(true);
   };
@@ -314,21 +411,59 @@ export function Dashboard() {
     return label.charAt(0).toUpperCase() + label.slice(1);
   }, [cursor]);
 
+  // Transações da conta selecionada (ou todas, se "all")
+  const accountFilteredTransactions = useMemo(() => {
+    if (selectedAccountId === 'all') return transactions;
+    return transactions.filter((t) => t.account === selectedAccountId);
+  }, [transactions, selectedAccountId]);
+
   const monthTransactions = useMemo(() => {
-    return transactions.filter((t) => {
+    return accountFilteredTransactions.filter((t) => {
       const [y, m] = t.date.split('-').map(Number);
       return y === cursor.year && m - 1 === cursor.month;
     });
-  }, [transactions, cursor]);
+  }, [accountFilteredTransactions, cursor]);
 
-  // Saldo acumulado de todos os meses anteriores ao selecionado
+  // Saldo acumulado de todos os meses anteriores ao selecionado. Ao ver
+  // "Todas as contas", transferências entre contas próprias se cancelam e
+  // não entram na conta; ao ver uma conta específica, elas contam.
   const previousBalance = useMemo(() => {
     const cursorStart = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}-01`;
-    return transactions.reduce((acc, t) => {
+    const initial =
+      selectedAccountId === 'all'
+        ? accounts.reduce((sum, a) => sum + (a.initialBalance || 0), 0)
+        : accounts.find((a) => a.id === selectedAccountId)?.initialBalance || 0;
+
+    const txSum = accountFilteredTransactions.reduce((acc, t) => {
       if (t.date >= cursorStart) return acc;
       return acc + (t.type === 'income' ? Number(t.amount) : -Number(t.amount));
     }, 0);
-  }, [transactions, cursor]);
+
+    let transferSum = 0;
+    if (selectedAccountId !== 'all') {
+      transferSum = transfers.reduce((acc, tr) => {
+        if (tr.date >= cursorStart) return acc;
+        if (tr.toAccount === selectedAccountId) return acc + Number(tr.amount);
+        if (tr.fromAccount === selectedAccountId) return acc - Number(tr.amount);
+        return acc;
+      }, 0);
+    }
+
+    return initial + txSum + transferSum;
+  }, [accounts, accountFilteredTransactions, transfers, cursor, selectedAccountId]);
+
+  // Net de transferências dentro do próprio mês selecionado (só relevante
+  // pra uma conta específica; na visão agregada, cancela)
+  const monthTransferNet = useMemo(() => {
+    if (selectedAccountId === 'all') return 0;
+    const monthPrefix = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}-`;
+    return transfers.reduce((acc, tr) => {
+      if (!tr.date.startsWith(monthPrefix)) return acc;
+      if (tr.toAccount === selectedAccountId) return acc + Number(tr.amount);
+      if (tr.fromAccount === selectedAccountId) return acc - Number(tr.amount);
+      return acc;
+    }, 0);
+  }, [transfers, cursor, selectedAccountId]);
 
   // Cálculos de Resumo (referentes ao mês selecionado)
   const summary = useMemo(() => {
@@ -346,9 +481,9 @@ export function Dashboard() {
     );
     return {
       ...totals,
-      balance: totals.income - totals.expense + previousBalance,
+      balance: totals.income - totals.expense + previousBalance + monthTransferNet,
     };
-  }, [monthTransactions, previousBalance]);
+  }, [monthTransactions, previousBalance, monthTransferNet]);
 
   const filteredTransactions = useMemo(() => {
     if (filterType === 'all') return monthTransactions;
@@ -381,6 +516,27 @@ export function Dashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={selectedAccountId}
+              onChange={(e) => setSelectedAccountId(e.target.value)}
+              className="bg-slate-900/60 border border-slate-800/80 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value="all">Todas as contas</option>
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.name}
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={() => setIsAccountsOpen(true)}
+              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+              title="Contas e carteiras"
+            >
+              <Landmark className="w-5 h-5" />
+            </button>
+
             <div className="flex items-center gap-1 bg-slate-900/60 border border-slate-800/80 rounded-xl px-1 py-1">
               <button
                 onClick={goPrevMonth}
@@ -426,7 +582,13 @@ export function Dashboard() {
             </button>
 
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                const defaultId = selectedAccountId !== 'all' ? selectedAccountId : accounts[0]?.id ?? '';
+                setAccountId(defaultId);
+                setFromAccountId(defaultId);
+                setToAccountId(accounts[1]?.id ?? defaultId);
+                setIsModalOpen(true);
+              }}
               className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-5 h-5" />
@@ -490,7 +652,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <MonthlyTrend transactions={transactions} cursor={cursor} />
+        <MonthlyTrend transactions={accountFilteredTransactions} cursor={cursor} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Tabela */}
@@ -552,6 +714,11 @@ export function Dashboard() {
                           {tx.installmentTotal && (
                             <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] rounded bg-slate-800 text-slate-400 border border-slate-700/50 align-middle">
                               {tx.installmentIndex}/{tx.installmentTotal}
+                            </span>
+                          )}
+                          {selectedAccountId === 'all' && (
+                            <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 align-middle">
+                              {accounts.find((a) => a.id === tx.account)?.name ?? '-'}
                             </span>
                           )}
                         </td>
@@ -623,6 +790,11 @@ export function Dashboard() {
                         <span className="text-[11px] text-slate-500">
                           {tx.date ? tx.date.split('-').reverse().join('/') : '-'}
                         </span>
+                        {selectedAccountId === 'all' && (
+                          <span className="inline-block px-1.5 py-0.5 text-[10px] rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                            {accounts.find((a) => a.id === tx.account)?.name ?? '-'}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
@@ -666,32 +838,45 @@ export function Dashboard() {
               {editingId ? 'Editar Transação' : 'Nova Transação'}
             </h3>
             <form onSubmit={handleAddTransaction} className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+              <div className={`grid ${editingId ? 'grid-cols-2' : 'grid-cols-3'} gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800`}>
                 <button
                   type="button"
-                  onClick={() => setType('expense')}
+                  onClick={() => setFormMode('expense')}
                   className={`py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    type === 'expense' ? 'bg-rose-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                    formMode === 'expense' ? 'bg-rose-600 text-white shadow' : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <ArrowDownCircle className="w-4 h-4" /> Despesa
                 </button>
                 <button
                   type="button"
-                  onClick={() => setType('income')}
+                  onClick={() => setFormMode('income')}
                   className={`py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    type === 'income' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                    formMode === 'income' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <ArrowUpCircle className="w-4 h-4" /> Receita
                 </button>
+                {!editingId && (
+                  <button
+                    type="button"
+                    onClick={() => setFormMode('transfer')}
+                    className={`py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      formMode === 'transfer' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <ArrowRightLeft className="w-4 h-4" /> Transferência
+                  </button>
+                )}
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Descrição</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">
+                  Descrição {formMode === 'transfer' && <span className="text-slate-600">(opcional)</span>}
+                </label>
                 <input
                   type="text"
-                  required
+                  required={formMode !== 'transfer'}
                   placeholder="Ex: Aluguel, Salário, Supermercado..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -724,7 +909,7 @@ export function Dashboard() {
                 </div>
               </div>
 
-              {!editingId && (
+              {!editingId && formMode !== 'transfer' && (
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-pointer">
                     <input
@@ -751,37 +936,90 @@ export function Dashboard() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Categoria</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="Alimentação">Alimentação</option>
-                    <option value="Moradia">Moradia</option>
-                    <option value="Lazer">Lazer</option>
-                    <option value="Transporte">Transporte</option>
-                    <option value="Salário">Salário</option>
-                    <option value="Freela">Freela</option>
-                    <option value="Outros">Outros</option>
-                  </select>
+              {formMode === 'transfer' ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Conta de origem</label>
+                    <select
+                      value={fromAccountId}
+                      required
+                      onChange={(e) => setFromAccountId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                    >
+                      {accounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Conta de destino</label>
+                    <select
+                      value={toAccountId}
+                      required
+                      onChange={(e) => setToAccountId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                    >
+                      {accounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Pagamento</label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="pix">PIX</option>
-                    <option value="credit_card">Crédito</option>
-                    <option value="debit_card">Débito</option>
-                    <option value="cash">Dinheiro</option>
-                  </select>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1">Categoria</label>
+                      <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="Alimentação">Alimentação</option>
+                        <option value="Moradia">Moradia</option>
+                        <option value="Lazer">Lazer</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Salário">Salário</option>
+                        <option value="Freela">Freela</option>
+                        <option value="Outros">Outros</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1">Pagamento</label>
+                      <select
+                        value={paymentMethod}
+                        onChange={(e) => setPaymentMethod(e.target.value as any)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="pix">PIX</option>
+                        <option value="credit_card">Crédito</option>
+                        <option value="debit_card">Débito</option>
+                        <option value="cash">Dinheiro</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Conta</label>
+                    <select
+                      value={accountId}
+                      required
+                      onChange={(e) => setAccountId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                    >
+                      {accounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                 <button
@@ -795,7 +1033,7 @@ export function Dashboard() {
                   type="submit"
                   className="px-5 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 cursor-pointer"
                 >
-                  {editingId ? 'Salvar Alterações' : 'Salvar no Banco'}
+                  {editingId ? 'Salvar Alterações' : formMode === 'transfer' ? 'Registrar Transferência' : 'Salvar no Banco'}
                 </button>
               </div>
             </form>
@@ -807,7 +1045,18 @@ export function Dashboard() {
         <FixedExpenses
           fixedExpenses={fixedExpenses}
           onChange={setFixedExpenses}
+          accounts={accounts}
           onClose={() => setIsFixedExpensesOpen(false)}
+        />
+      )}
+
+      {isAccountsOpen && (
+        <Accounts
+          accounts={accounts}
+          onChange={setAccounts}
+          transactions={transactions}
+          transfers={transfers}
+          onClose={() => setIsAccountsOpen(false)}
         />
       )}
 

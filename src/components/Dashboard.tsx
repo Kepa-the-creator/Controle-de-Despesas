@@ -9,11 +9,13 @@ import {
   ChevronRight,
   LogOut,
   Repeat,
+  Pencil,
 } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import { useAuth } from '../hooks/useAuth';
 import { CategoryChart } from './CategoryChart';
 import { FixedExpenses, type FixedExpense } from './FixedExpenses';
+import { MonthlyTrend } from './MonthlyTrend';
 import { addMonthsClamped, daysInMonth } from '../lib/date';
 
 export interface Transaction {
@@ -54,6 +56,7 @@ export function Dashboard() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isInstallment, setIsInstallment] = useState(false);
   const [installmentCount, setInstallmentCount] = useState('2');
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Busca inicial + assinatura em tempo real (SSE) no PocketBase
   useEffect(() => {
@@ -154,12 +157,30 @@ export function Dashboard() {
     })();
   }, [cursor, fixedExpenses, transactions]);
 
-  // Cadastrar no banco (o estado é atualizado via assinatura em tempo real)
+  // Cadastrar ou editar no banco (o estado é atualizado via assinatura em tempo real)
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description || !amount) return;
 
     const totalAmount = parseFloat(amount);
+
+    if (editingId) {
+      try {
+        await pb.collection('transactions').update(editingId, {
+          description,
+          amount: totalAmount,
+          type,
+          category,
+          paymentMethod,
+          date,
+        });
+        closeModal();
+      } catch (err: any) {
+        alert('Erro ao salvar alterações: ' + err.message);
+      }
+      return;
+    }
+
     const installments = isInstallment ? Math.max(2, parseInt(installmentCount, 10) || 2) : 1;
 
     try {
@@ -194,15 +215,35 @@ export function Dashboard() {
         }
       }
 
-      setIsModalOpen(false);
-      setDescription('');
-      setAmount('');
-      setType('expense');
-      setIsInstallment(false);
-      setInstallmentCount('2');
+      closeModal();
     } catch (err: any) {
       alert('Erro ao salvar no banco: ' + err.message);
     }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setDescription('');
+    setAmount('');
+    setType('expense');
+    setCategory('Alimentação');
+    setPaymentMethod('pix');
+    setDate(new Date().toISOString().split('T')[0]);
+    setIsInstallment(false);
+    setInstallmentCount('2');
+  };
+
+  const handleEditClick = (tx: Transaction) => {
+    setEditingId(tx.id);
+    setDescription(tx.description);
+    setAmount(String(tx.amount));
+    setType(tx.type);
+    setCategory(tx.category);
+    setPaymentMethod(tx.paymentMethod);
+    setDate(tx.date.slice(0, 10));
+    setIsInstallment(false);
+    setIsModalOpen(true);
   };
 
   // Excluir do banco (o estado é atualizado via assinatura em tempo real)
@@ -389,6 +430,8 @@ export function Dashboard() {
           </div>
         </div>
 
+        <MonthlyTrend transactions={transactions} cursor={cursor} />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Tabela */}
           <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl overflow-hidden shadow-sm">
@@ -416,7 +459,7 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-800/60 text-xs text-slate-400 font-medium uppercase tracking-wider">
@@ -468,19 +511,85 @@ export function Dashboard() {
                           {formatCurrency(tx.amount)}
                         </td>
                         <td className="py-4 px-6 text-center">
-                          <button
-                            onClick={() => handleDelete(tx.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                            title="Excluir"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleEditClick(tx)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                              title="Editar"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(tx.id)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Cards (mobile) */}
+            <div className="md:hidden divide-y divide-slate-800/40">
+              {loading ? (
+                <p className="py-8 text-center text-slate-500 text-sm">Carregando dados do servidor...</p>
+              ) : filteredTransactions.length === 0 ? (
+                <p className="py-8 text-center text-slate-500 text-sm">Nenhuma transação cadastrada neste período.</p>
+              ) : (
+                filteredTransactions.map((tx) => (
+                  <div key={tx.id} className="p-4 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-white truncate">
+                        {tx.description}
+                        {tx.installmentTotal && (
+                          <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] rounded bg-slate-800 text-slate-400 border border-slate-700/50 align-middle">
+                            {tx.installmentIndex}/{tx.installmentTotal}
+                          </span>
+                        )}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <span className="inline-block px-2 py-0.5 text-[11px] rounded-lg bg-slate-800 text-slate-300 border border-slate-700/50">
+                          {tx.category}
+                        </span>
+                        <span className="text-[11px] text-slate-500 uppercase">
+                          {tx.paymentMethod ? tx.paymentMethod.replace('_', ' ') : '-'}
+                        </span>
+                        <span className="text-[11px] text-slate-500">
+                          {tx.date ? tx.date.split('-').reverse().join('/') : '-'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <span className={`font-semibold text-sm ${tx.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {tx.type === 'income' ? '+ ' : '- '}
+                        {formatCurrency(tx.amount)}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleEditClick(tx)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                          title="Editar"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(tx.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -493,7 +602,9 @@ export function Dashboard() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-4">Nova Transação</h3>
+            <h3 className="text-xl font-bold text-white mb-4">
+              {editingId ? 'Editar Transação' : 'Nova Transação'}
+            </h3>
             <form onSubmit={handleAddTransaction} className="space-y-4">
               <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
                 <button
@@ -553,30 +664,32 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isInstallment}
-                    onChange={(e) => setIsInstallment(e.target.checked)}
-                    className="rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500"
-                  />
-                  Compra parcelada?
-                </label>
-                {isInstallment && (
-                  <div className="flex items-center gap-2">
+              {!editingId && (
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-pointer">
                     <input
-                      type="number"
-                      min={2}
-                      required
-                      value={installmentCount}
-                      onChange={(e) => setInstallmentCount(e.target.value)}
-                      className="w-20 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                      type="checkbox"
+                      checked={isInstallment}
+                      onChange={(e) => setIsInstallment(e.target.checked)}
+                      className="rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-xs text-slate-500">parcelas</span>
-                  </div>
-                )}
-              </div>
+                    Compra parcelada?
+                  </label>
+                  {isInstallment && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={2}
+                        required
+                        value={installmentCount}
+                        onChange={(e) => setInstallmentCount(e.target.value)}
+                        className="w-20 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                      />
+                      <span className="text-xs text-slate-500">parcelas</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -613,7 +726,7 @@ export function Dashboard() {
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeModal}
                   className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
                 >
                   Cancelar
@@ -622,7 +735,7 @@ export function Dashboard() {
                   type="submit"
                   className="px-5 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 cursor-pointer"
                 >
-                  Salvar no Banco
+                  {editingId ? 'Salvar Alterações' : 'Salvar no Banco'}
                 </button>
               </div>
             </form>

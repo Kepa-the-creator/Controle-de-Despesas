@@ -28,7 +28,7 @@ export function MonthlyTrend({ transactions, cursor }: MonthlyTrendProps) {
     return months.map(({ year, month }) => {
       const totals = transactions.reduce(
         (acc, t) => {
-          const [y, m] = t.date.split('-').map(Number);
+          const [y, m] = t.date.slice(0, 10).split('-').map(Number);
           if (y === year && m - 1 === month) {
             if (t.type === 'income') acc.income += Number(t.amount);
             else acc.expense += Number(t.amount);

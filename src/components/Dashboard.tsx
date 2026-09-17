@@ -438,7 +438,7 @@ export function Dashboard() {
 
   const monthTransactions = useMemo(() => {
     return accountFilteredTransactions.filter((t) => {
-      const [y, m] = t.date.split('-').map(Number);
+      const [y, m] = t.date.slice(0, 10).split('-').map(Number);
       return y === cursor.year && m - 1 === cursor.month;
     });
   }, [accountFilteredTransactions, cursor]);
@@ -758,7 +758,7 @@ export function Dashboard() {
                           {tx.paymentMethod ? tx.paymentMethod.replace('_', ' ') : '-'}
                         </td>
                         <td className="py-4 px-6 text-slate-400">
-                          {tx.date ? tx.date.split('-').reverse().join('/') : '-'}
+                          {tx.date ? tx.date.slice(0, 10).split('-').reverse().join('/') : '-'}
                         </td>
                         <td className={`py-4 px-6 text-right font-semibold ${tx.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
                           {tx.type === 'income' ? '+ ' : '- '}
@@ -815,7 +815,7 @@ export function Dashboard() {
                           {tx.paymentMethod ? tx.paymentMethod.replace('_', ' ') : '-'}
                         </span>
                         <span className="text-[11px] text-slate-500">
-                          {tx.date ? tx.date.split('-').reverse().join('/') : '-'}
+                          {tx.date ? tx.date.slice(0, 10).split('-').reverse().join('/') : '-'}
                         </span>
                         {selectedAccountId === 'all' && (
                           <span className="inline-block px-1.5 py-0.5 text-[10px] rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">

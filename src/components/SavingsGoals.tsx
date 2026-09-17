@@ -51,7 +51,7 @@ export function SavingsGoals({ goals, onChange, cursor, onClose }: SavingsGoalsP
     const relevant = contributions.filter((c) => {
       if (c.goal !== goal.id) return false;
       if (goal.period === 'total') return true;
-      const [y, m] = c.date.split('-').map(Number);
+      const [y, m] = c.date.slice(0, 10).split('-').map(Number);
       return y === cursor.year && m - 1 === cursor.month;
     });
     return relevant.reduce((sum, c) => sum + Number(c.amount), 0);

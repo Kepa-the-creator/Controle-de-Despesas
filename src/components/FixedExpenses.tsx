@@ -12,6 +12,7 @@ export interface FixedExpense {
   dayOfMonth: number;
   active: boolean;
   account: string;
+  startMonth: string;
 }
 
 interface AccountOption {
@@ -40,6 +41,8 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
     if (!description || !amount || !accountId) return;
 
     try {
+      const now = new Date();
+      const startMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       const record = await pb.collection('fixed_expenses').create<FixedExpense>({
         description,
         amount: parseFloat(amount),
@@ -48,6 +51,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
         paymentMethod,
         dayOfMonth: Math.min(31, Math.max(1, parseInt(dayOfMonth, 10) || 1)),
         active: true,
+        startMonth,
         account: accountId,
         user: pb.authStore.record?.id,
       });

@@ -253,12 +253,13 @@ export function Dashboard() {
       (cursor.year === now.getFullYear() && cursor.month <= now.getMonth());
     if (!isPastOrCurrentMonth) return;
 
+    const cursorMonthStr = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}`;
+
     const pending = fixedExpenses.filter((fe) => {
       if (!fe.active) return false;
+      if (fe.startMonth && cursorMonthStr < fe.startMonth) return false;
       return !transactions.some(
-        (t) =>
-          t.recurringSource === fe.id &&
-          t.date.startsWith(`${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}`)
+        (t) => t.recurringSource === fe.id && t.date.startsWith(cursorMonthStr)
       );
     });
     if (pending.length === 0) return;

@@ -32,7 +32,7 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose 
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
-    if (!limit) return;
+    if (!limit || parseFloat(limit) <= 0) return;
 
     const existing = budgets.find((b) => b.category === category);
     try {
@@ -133,6 +133,7 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose 
               <input
                 type="number"
                 step="0.01"
+                min="0.01"
                 required
                 placeholder="0,00"
                 value={limit}

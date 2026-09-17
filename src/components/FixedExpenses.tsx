@@ -18,6 +18,7 @@ export interface FixedExpense {
 interface AccountOption {
   id: string;
   name: string;
+  active?: boolean;
 }
 
 interface FixedExpensesProps {
@@ -28,18 +29,21 @@ interface FixedExpensesProps {
 }
 
 export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: FixedExpensesProps) {
+  const activeAccounts = accounts.filter((a) => a.active !== false);
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [category, setCategory] = useState('Moradia');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card' | 'debit_card' | 'cash'>('pix');
   const [dayOfMonth, setDayOfMonth] = useState('5');
-  const [accountId, setAccountId] = useState(accounts[0]?.id ?? '');
+  const [accountId, setAccountId] = useState(activeAccounts[0]?.id ?? '');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleAdd = async (e: FormEvent) => {
     e.preventDefault();
-    if (!description || !amount || !accountId) return;
+    if (!description || !amount || !accountId || submitting) return;
 
+    setSubmitting(true);
     try {
       const now = new Date();
       const startMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -62,6 +66,8 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
       setDayOfMonth('5');
     } catch (err: any) {
       alert('Erro ao salvar lançamento fixo: ' + err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -75,6 +81,13 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
   };
 
   const handleDelete = async (id: string) => {
+    if (
+      !window.confirm(
+        'Excluir este lançamento fixo? Isso também apaga TODAS as transações que ele já gerou automaticamente (histórico incluso), não só as futuras.'
+      )
+    ) {
+      return;
+    }
     try {
       await pb.collection('fixed_expenses').delete(id);
       onChange(fixedExpenses.filter((item) => item.id !== id));
@@ -247,7 +260,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
                 onChange={(e) => setAccountId(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
               >
-                {accounts.map((acc) => (
+                {activeAccounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
                     {acc.name}
                   </option>
@@ -258,10 +271,10 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
 
           <button
             type="submit"
-            disabled={!accountId}
+            disabled={!accountId || submitting}
             className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all active:scale-95 cursor-pointer"
           >
-            <Plus className="w-4 h-4" /> Adicionar lançamento fixo
+            <Plus className="w-4 h-4" /> {submitting ? 'Salvando...' : 'Adicionar lançamento fixo'}
           </button>
         </form>
       </div>

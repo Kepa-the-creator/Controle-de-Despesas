@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { Plus, Trash2, Target, X, Coins } from 'lucide-react';
 import { pb } from '../services/pocketbase';
+import { todayLocal } from '../lib/date';
 
 export interface SavingsGoal {
   id: string;
@@ -95,7 +96,7 @@ export function SavingsGoals({ goals, onChange, cursor, onClose }: SavingsGoalsP
       const record = await pb.collection('savings_contributions').create<Contribution>({
         goal: goalId,
         amount: parseFloat(contributionAmount),
-        date: new Date().toISOString().split('T')[0],
+        date: todayLocal(),
         user: pb.authStore.record?.id,
       });
       setContributions((prev) => [...prev, record]);

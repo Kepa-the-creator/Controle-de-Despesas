@@ -38,6 +38,7 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingInitialBalance, setEditingInitialBalance] = useState('0');
+  const [submitting, setSubmitting] = useState(false);
 
   const balanceFor = (accountId: string, base: number) => {
     let total = base;
@@ -54,8 +55,9 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
 
   const handleAdd = async (e: FormEvent) => {
     e.preventDefault();
-    if (!name) return;
+    if (!name || submitting) return;
 
+    setSubmitting(true);
     try {
       const record = await pb.collection('accounts').create<Account>({
         name,
@@ -68,6 +70,8 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
       setInitialBalance('0');
     } catch (err: any) {
       alert('Erro ao criar conta: ' + err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -81,11 +85,23 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
   };
 
   const handleDelete = async (id: string) => {
+    if (
+      !window.confirm(
+        'Excluir esta conta? Só é possível se não houver nenhuma transação ou lançamento fixo vinculado a ela.'
+      )
+    ) {
+      return;
+    }
     try {
       await pb.collection('accounts').delete(id);
       onChange(accounts.filter((a) => a.id !== id));
     } catch (err: any) {
-      alert('Erro ao excluir conta: ' + err.message);
+      const isBlockedByRelation = /required relation/i.test(err.message || '');
+      alert(
+        isBlockedByRelation
+          ? 'Não é possível excluir: essa conta ainda tem transações ou lançamentos fixos vinculados a ela. Mova ou apague-os primeiro.'
+          : 'Erro ao excluir conta: ' + err.message
+      );
     }
   };
 
@@ -237,9 +253,10 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
 
           <button
             type="submit"
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all active:scale-95 cursor-pointer"
+            disabled={submitting}
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all active:scale-95 cursor-pointer"
           >
-            <Plus className="w-4 h-4" /> Criar conta
+            <Plus className="w-4 h-4" /> {submitting ? 'Criando...' : 'Criar conta'}
           </button>
         </form>
       </div>

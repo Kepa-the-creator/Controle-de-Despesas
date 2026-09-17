@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
-import type { Transaction } from './Dashboard';
+import type { Transaction, Transfer } from './Dashboard';
 
 interface MonthlyTrendProps {
   transactions: Transaction[];
+  transfers: Transfer[];
+  selectedAccountId: string;
   cursor: { year: number; month: number };
 }
 
@@ -15,8 +17,35 @@ const monthShortLabel = (year: number, month: number) => {
   return `${label.replace('.', '')}/${String(year).slice(-2)}`;
 };
 
-export function MonthlyTrend({ transactions, cursor }: MonthlyTrendProps) {
+export function MonthlyTrend({ transactions, transfers, selectedAccountId, cursor }: MonthlyTrendProps) {
   const data = useMemo(() => {
+    // Uma única passada agrupando por mês (em vez de 12 passadas completas
+    // pelo histórico inteiro), já somando o efeito das transferências pra
+    // o "Saldo" bater com o card de resumo do mesmo mês/conta.
+    const byMonth = new Map<string, { income: number; expense: number; transferNet: number }>();
+    const get = (key: string) => {
+      let entry = byMonth.get(key);
+      if (!entry) {
+        entry = { income: 0, expense: 0, transferNet: 0 };
+        byMonth.set(key, entry);
+      }
+      return entry;
+    };
+
+    for (const t of transactions) {
+      const entry = get(t.date.slice(0, 7));
+      if (t.type === 'income') entry.income += Number(t.amount);
+      else entry.expense += Number(t.amount);
+    }
+
+    if (selectedAccountId !== 'all') {
+      for (const tr of transfers) {
+        const entry = get(tr.date.slice(0, 7));
+        if (tr.toAccount === selectedAccountId) entry.transferNet += Number(tr.amount);
+        if (tr.fromAccount === selectedAccountId) entry.transferNet -= Number(tr.amount);
+      }
+    }
+
     const months: { year: number; month: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const total = cursor.year * 12 + cursor.month - i;
@@ -26,25 +55,16 @@ export function MonthlyTrend({ transactions, cursor }: MonthlyTrendProps) {
     }
 
     return months.map(({ year, month }) => {
-      const totals = transactions.reduce(
-        (acc, t) => {
-          const [y, m] = t.date.slice(0, 10).split('-').map(Number);
-          if (y === year && m - 1 === month) {
-            if (t.type === 'income') acc.income += Number(t.amount);
-            else acc.expense += Number(t.amount);
-          }
-          return acc;
-        },
-        { income: 0, expense: 0 }
-      );
+      const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+      const entry = byMonth.get(key) ?? { income: 0, expense: 0, transferNet: 0 };
       return {
         label: monthShortLabel(year, month),
-        income: totals.income,
-        expense: totals.expense,
-        balance: totals.income - totals.expense,
+        income: entry.income,
+        expense: entry.expense,
+        balance: entry.income - entry.expense + entry.transferNet,
       };
     });
-  }, [transactions, cursor]);
+  }, [transactions, transfers, selectedAccountId, cursor]);
 
   return (
     <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-sm">

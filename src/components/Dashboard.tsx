@@ -271,7 +271,7 @@ export function Dashboard() {
           await pb.collection('transactions').create({
             description: fe.description,
             amount: fe.amount,
-            type: 'expense',
+            type: fe.type,
             category: fe.category,
             paymentMethod: fe.paymentMethod,
             date: targetDate,
@@ -579,7 +579,7 @@ export function Dashboard() {
             <button
               onClick={() => setIsFixedExpensesOpen(true)}
               className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
-              title="Despesas fixas"
+              title="Lançamentos fixos"
             >
               <Repeat className="w-5 h-5" />
             </button>

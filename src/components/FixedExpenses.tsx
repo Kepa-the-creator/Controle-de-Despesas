@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
-import { Plus, Trash2, Repeat, X } from 'lucide-react';
+import { Plus, Trash2, Repeat, X, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 
 export interface FixedExpense {
   id: string;
   description: string;
   amount: number;
+  type: 'income' | 'expense';
   category: string;
   paymentMethod?: 'pix' | 'credit_card' | 'debit_card' | 'cash';
   dayOfMonth: number;
@@ -28,6 +29,7 @@ interface FixedExpensesProps {
 export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: FixedExpensesProps) {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
+  const [type, setType] = useState<'income' | 'expense'>('expense');
   const [category, setCategory] = useState('Moradia');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card' | 'debit_card' | 'cash'>('pix');
   const [dayOfMonth, setDayOfMonth] = useState('5');
@@ -41,6 +43,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
       const record = await pb.collection('fixed_expenses').create<FixedExpense>({
         description,
         amount: parseFloat(amount),
+        type,
         category,
         paymentMethod,
         dayOfMonth: Math.min(31, Math.max(1, parseInt(dayOfMonth, 10) || 1)),
@@ -51,9 +54,10 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
       onChange([...fixedExpenses, record]);
       setDescription('');
       setAmount('');
+      setType('expense');
       setDayOfMonth('5');
     } catch (err: any) {
-      alert('Erro ao salvar despesa fixa: ' + err.message);
+      alert('Erro ao salvar lançamento fixo: ' + err.message);
     }
   };
 
@@ -83,7 +87,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
-            <Repeat className="w-5 h-5 text-blue-400" /> Despesas Fixas
+            <Repeat className="w-5 h-5 text-blue-400" /> Lançamentos Fixos
           </h3>
           <button
             onClick={onClose}
@@ -95,19 +99,24 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
 
         <div className="space-y-2 max-h-56 overflow-y-auto mb-4">
           {fixedExpenses.length === 0 ? (
-            <p className="text-sm text-slate-500 text-center py-4">Nenhuma despesa fixa cadastrada.</p>
+            <p className="text-sm text-slate-500 text-center py-4">Nenhum lançamento fixo cadastrado.</p>
           ) : (
             fixedExpenses.map((fe) => (
               <div
                 key={fe.id}
                 className="flex items-center justify-between gap-3 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5"
               >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{fe.description}</p>
-                  <p className="text-xs text-slate-500">
-                    {formatCurrency(fe.amount)} · todo dia {fe.dayOfMonth} · {fe.category} ·{' '}
-                    {accounts.find((a) => a.id === fe.account)?.name ?? '-'}
-                  </p>
+                <div className="min-w-0 flex items-start gap-2">
+                  <div className={`mt-0.5 p-1 rounded-md shrink-0 ${fe.type === 'income' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                    {fe.type === 'income' ? <ArrowUpCircle className="w-3.5 h-3.5" /> : <ArrowDownCircle className="w-3.5 h-3.5" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{fe.description}</p>
+                    <p className="text-xs text-slate-500">
+                      {formatCurrency(fe.amount)} · todo dia {fe.dayOfMonth} · {fe.category} ·{' '}
+                      {accounts.find((a) => a.id === fe.account)?.name ?? '-'}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
@@ -136,6 +145,27 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
         </div>
 
         <form onSubmit={handleAdd} className="space-y-3 border-t border-slate-800 pt-4">
+          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setType('expense')}
+              className={`py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                type === 'expense' ? 'bg-rose-600 text-white shadow' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <ArrowDownCircle className="w-4 h-4" /> Despesa
+            </button>
+            <button
+              type="button"
+              onClick={() => setType('income')}
+              className={`py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                type === 'income' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <ArrowUpCircle className="w-4 h-4" /> Receita
+            </button>
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1">Descrição</label>
             <input
@@ -200,6 +230,8 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
                 <option value="Moradia">Moradia</option>
                 <option value="Lazer">Lazer</option>
                 <option value="Transporte">Transporte</option>
+                <option value="Salário">Salário</option>
+                <option value="Freela">Freela</option>
                 <option value="Outros">Outros</option>
               </select>
             </div>
@@ -225,7 +257,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
             disabled={!accountId}
             className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all active:scale-95 cursor-pointer"
           >
-            <Plus className="w-4 h-4" /> Adicionar despesa fixa
+            <Plus className="w-4 h-4" /> Adicionar lançamento fixo
           </button>
         </form>
       </div>

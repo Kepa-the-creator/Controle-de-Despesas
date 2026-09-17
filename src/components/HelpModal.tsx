@@ -26,8 +26,8 @@ const FAQ = [
     a: 'Marque "Compra parcelada?", informe o valor TOTAL da compra e o número de parcelas. O app divide automaticamente e cria uma transação em cada um dos meses seguintes, todas marcadas com um badge (ex: "3/12").',
   },
   {
-    q: 'Como funcionam as Despesas Fixas?',
-    a: 'Cadastre uma vez (ex: Aluguel, todo dia 5) e o app gera sozinho o lançamento daquele mês, automaticamente, sempre que você abrir o dashboard naquele mês ou em meses anteriores ainda não gerados.',
+    q: 'Como funcionam os Lançamentos Fixos?',
+    a: 'Cadastre uma vez (ex: Aluguel como despesa todo dia 5, ou Salário como receita todo dia 1) e o app gera sozinho o lançamento daquele mês, automaticamente, sempre que você abrir o dashboard naquele mês ou em meses anteriores ainda não gerados. Funciona tanto pra despesa quanto pra receita.',
   },
   {
     q: 'O que é o "Saldo Anterior" no resumo do mês?',

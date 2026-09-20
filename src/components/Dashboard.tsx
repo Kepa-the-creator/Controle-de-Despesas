@@ -630,28 +630,44 @@ export function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased p-4 md:p-8">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased p-4 md:p-8 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
       <div className="max-w-6xl mx-auto space-y-8">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+        <header className="space-y-4 border-b border-slate-800/80 pb-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 shrink-0 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <Wallet className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
-                Controle-de-Despesas
-              </h1>
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white truncate">
+                  Controle de Despesas
+                </h1>
+                <p className="text-slate-400 text-xs sm:text-sm">Seu controle financeiro</p>
+              </div>
             </div>
-            <p className="text-slate-400 text-sm mt-1">
-              Conectado ao PocketBase local e persistente.
-            </p>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setIsHelpOpen(true)}
+                className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+                title="Ajuda"
+              >
+                <HelpCircle className="w-5 h-5" />
+              </button>
+              <button
+                onClick={logout}
+                className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+                title="Sair"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <select
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="bg-slate-900/60 border border-slate-800/80 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+              className="w-full sm:w-auto bg-slate-900/60 border border-slate-800/80 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="all">Todas as contas</option>
               {accounts.map((acc) => (
@@ -661,58 +677,28 @@ export function Dashboard() {
               ))}
             </select>
 
-            <button
-              onClick={() => setIsAccountsOpen(true)}
-              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
-              title="Contas e carteiras"
-            >
-              <Landmark className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-1 bg-slate-900/60 border border-slate-800/80 rounded-xl px-1 py-1">
+            <div className="flex items-center justify-between sm:justify-start gap-1 bg-slate-900/60 border border-slate-800/80 rounded-xl px-1 py-1">
               <button
                 onClick={goPrevMonth}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Mês anterior"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-sm font-medium text-white min-w-[130px] text-center capitalize">
+              <span className="text-sm font-medium text-white sm:min-w-[130px] text-center capitalize">
                 {monthLabel}
               </span>
               <button
                 onClick={goNextMonth}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Próximo mês"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
+          </div>
 
-            <button
-              onClick={() => setIsFixedExpensesOpen(true)}
-              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
-              title="Lançamentos fixos"
-            >
-              <Repeat className="w-5 h-5" />
-            </button>
-
-            <button
-              onClick={() => setIsCategoryBudgetsOpen(true)}
-              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
-              title="Orçamento por categoria"
-            >
-              <Gauge className="w-5 h-5" />
-            </button>
-
-            <button
-              onClick={() => setIsSavingsGoalsOpen(true)}
-              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
-              title="Metas de economia"
-            >
-              <Target className="w-5 h-5" />
-            </button>
-
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
             <button
               onClick={() => {
                 const defaultId = selectedAccountId !== 'all' ? selectedAccountId : activeAccounts[0]?.id ?? '';
@@ -721,72 +707,71 @@ export function Dashboard() {
                 setToAccountId(activeAccounts[1]?.id ?? defaultId);
                 setIsModalOpen(true);
               }}
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all active:scale-95 cursor-pointer"
+              className="col-span-2 sm:col-span-1 sm:order-last flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 sm:py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-600/30 transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-5 h-5" />
-              <span className="hidden sm:inline">Nova Transação</span>
+              Nova Transação
             </button>
-
-            <button
-              onClick={() => setIsHelpOpen(true)}
-              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
-              title="Ajuda"
-            >
-              <HelpCircle className="w-5 h-5" />
-            </button>
-
-            <button
-              onClick={logout}
-              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
-              title="Sair"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
+            {[
+              { label: 'Contas', icon: Landmark, onClick: () => setIsAccountsOpen(true) },
+              { label: 'Fixos', icon: Repeat, onClick: () => setIsFixedExpensesOpen(true) },
+              { label: 'Orçamento', icon: Gauge, onClick: () => setIsCategoryBudgetsOpen(true) },
+              { label: 'Metas', icon: Target, onClick: () => setIsSavingsGoalsOpen(true) },
+            ].map(({ label, icon: Icon, onClick }) => (
+              <button
+                key={label}
+                onClick={onClick}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-200 bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+              >
+                <Icon className="w-4 h-4 text-blue-400" />
+                {label}
+              </button>
+            ))}
           </div>
         </header>
 
         {/* Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-sm">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+          <div className="bg-slate-900/60 border border-slate-800/80 border-l-4 border-l-emerald-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-400">Receitas</span>
+              <span className="text-xs sm:text-sm font-medium text-slate-400">Receitas</span>
               <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
                 <ArrowUpCircle className="w-5 h-5" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-white mt-4">{formatCurrency(summary.income)}</p>
+            <p className="text-lg sm:text-3xl font-bold text-white mt-2 sm:mt-4">{formatCurrency(summary.income)}</p>
           </div>
 
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-sm">
+          <div className="bg-slate-900/60 border border-slate-800/80 border-l-4 border-l-rose-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-400">Despesas</span>
+              <span className="text-xs sm:text-sm font-medium text-slate-400">Despesas</span>
               <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400">
                 <ArrowDownCircle className="w-5 h-5" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-white mt-4">{formatCurrency(summary.expense)}</p>
+            <p className="text-lg sm:text-3xl font-bold text-white mt-2 sm:mt-4">{formatCurrency(summary.expense)}</p>
           </div>
 
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-sm">
+          <div className="bg-slate-900/60 border border-slate-800/80 border-l-4 border-l-slate-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-400">Saldo Anterior</span>
+              <span className="text-xs sm:text-sm font-medium text-slate-400">Saldo Anterior</span>
               <div className={`p-2 rounded-lg ${previousBalance >= 0 ? 'bg-blue-500/10 text-blue-400' : 'bg-rose-500/10 text-rose-400'}`}>
                 <Repeat className="w-5 h-5" />
               </div>
             </div>
-            <p className={`text-3xl font-bold mt-4 ${previousBalance >= 0 ? 'text-white' : 'text-rose-400'}`}>
+            <p className={`text-lg sm:text-3xl font-bold mt-2 sm:mt-4 ${previousBalance >= 0 ? 'text-white' : 'text-rose-400'}`}>
               {formatCurrency(previousBalance)}
             </p>
           </div>
 
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-sm">
+          <div className="bg-slate-900/60 border border-slate-800/80 border-l-4 border-l-blue-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-400">Saldo Livre</span>
+              <span className="text-xs sm:text-sm font-medium text-slate-400">Saldo Livre</span>
               <div className={`p-2 rounded-lg ${summary.balance >= 0 ? 'bg-blue-500/10 text-blue-400' : 'bg-rose-500/10 text-rose-400'}`}>
                 <Wallet className="w-5 h-5" />
               </div>
             </div>
-            <p className={`text-3xl font-bold mt-4 ${summary.balance >= 0 ? 'text-blue-400' : 'text-rose-400'}`}>
+            <p className={`text-lg sm:text-3xl font-bold mt-2 sm:mt-4 ${summary.balance >= 0 ? 'text-blue-400' : 'text-rose-400'}`}>
               {formatCurrency(summary.balance)}
             </p>
           </div>

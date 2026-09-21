@@ -6,6 +6,9 @@
 :root { color-scheme: dark; }
 body { background: var(--color-slate-950); }
 
+/* Bordas mais marcadas no escuro (slate-800 padrão some no fundo quase preto) */
+:root { --color-slate-800: #2b3a52; }
+
 :root[data-theme="light"] {
   color-scheme: light;
   --color-slate-50: #0f172a;
@@ -16,7 +19,7 @@ body { background: var(--color-slate-950); }
   --color-slate-500: #7b89a3;
   --color-slate-600: #b6c0d2;
   --color-slate-700: #d3dae7;
-  --color-slate-800: #e3e8f1;
+  --color-slate-800: #c5cee0;
   --color-slate-900: #ffffff;
   --color-slate-950: #f3f6fb;
 

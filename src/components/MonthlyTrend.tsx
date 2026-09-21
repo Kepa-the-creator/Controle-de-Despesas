@@ -71,7 +71,7 @@ export function MonthlyTrend({ transactions, transfers, selectedAccountId, curso
   }, [transactions, transfers, selectedAccountId, cursor]);
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-sm">
+    <div className="bg-slate-900/60 border-2 border-slate-800 rounded-2xl p-6 backdrop-blur-sm">
       <h2 className="text-lg font-semibold text-slate-100 mb-4">Evolução Mensal (últimos 12 meses)</h2>
       <ResponsiveContainer width="100%" height={260}>
         <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>

@@ -26,7 +26,7 @@ export function CategoryChart({ transactions, theme }: CategoryChartProps) {
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-sm">
+    <div className="bg-slate-900/60 border-2 border-slate-800 rounded-2xl p-6 backdrop-blur-sm">
       <h2 className="text-lg font-semibold text-slate-100 mb-4">Despesas por Categoria</h2>
       {data.length === 0 ? (
         <div className="flex items-center justify-center h-[280px]">

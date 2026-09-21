@@ -695,11 +695,11 @@ export function Dashboard() {
     const isIncome = kind === 'income';
     return (
       <section
-        className={`${mobileTab === kind ? '' : 'hidden'} md:block rounded-2xl overflow-hidden border border-slate-800/80 border-t-4 ${
+        className={`${mobileTab === kind ? '' : 'hidden'} md:block rounded-2xl overflow-hidden border-2 border-slate-800 border-t-4 ${
           isIncome ? 'border-t-emerald-500' : 'border-t-rose-500'
         } bg-slate-900/60 shadow-sm`}
       >
-        <div className="p-4 sm:p-5 flex items-center justify-between gap-3 border-b border-slate-800/80">
+        <div className="p-4 sm:p-5 flex items-center justify-between gap-3 border-b border-slate-800">
           <div className="flex items-center gap-3 min-w-0">
             <div className={`p-2 rounded-lg ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
               {isIncome ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
@@ -730,8 +730,8 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased p-4 md:p-8 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <header className="space-y-4 border-b border-slate-800/80 pb-6">
+      <div className="max-w-6xl mx-auto space-y-8 sm:border-2 sm:border-slate-800 sm:rounded-3xl sm:p-6 sm:shadow-sm">
+        <header className="space-y-4 border-b-2 border-slate-800 pb-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 shrink-0 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -747,21 +747,21 @@ export function Dashboard() {
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={toggleTheme}
-                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 border border-slate-800 transition-colors cursor-pointer"
                 title={theme === 'light' ? 'Tema escuro' : 'Tema claro'}
               >
                 {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
               </button>
               <button
                 onClick={() => setIsHelpOpen(true)}
-                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 border border-slate-800 transition-colors cursor-pointer"
                 title="Ajuda"
               >
                 <HelpCircle className="w-5 h-5" />
               </button>
               <button
                 onClick={logout}
-                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 border border-slate-800 transition-colors cursor-pointer"
                 title="Sair"
               >
                 <LogOut className="w-5 h-5" />
@@ -773,7 +773,7 @@ export function Dashboard() {
             <select
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="w-full sm:w-auto bg-slate-900/60 border border-slate-800/80 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500 cursor-pointer"
+              className="w-full sm:w-auto bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="all">Todas as contas</option>
               {accounts.map((acc) => (
@@ -783,7 +783,7 @@ export function Dashboard() {
               ))}
             </select>
 
-            <div className="flex items-center justify-between sm:justify-start gap-1 bg-slate-900/60 border border-slate-800/80 rounded-xl px-1 py-1">
+            <div className="flex items-center justify-between sm:justify-start gap-1 bg-slate-900/60 border border-slate-800 rounded-xl px-1 py-1">
               <button
                 onClick={goPrevMonth}
                 className="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
@@ -827,7 +827,7 @@ export function Dashboard() {
               <button
                 key={label}
                 onClick={onClick}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-200 bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-200 bg-slate-900/60 hover:bg-slate-800 border border-slate-800 transition-colors cursor-pointer"
               >
                 <Icon className="w-4 h-4 text-blue-400" />
                 {label}
@@ -838,7 +838,7 @@ export function Dashboard() {
 
         {/* Resumo */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
-          <div className="bg-slate-900/60 border border-slate-800/80 border-l-4 border-l-emerald-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+          <div className="bg-slate-900/60 border-2 border-slate-800 border-l-4 border-l-emerald-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs sm:text-sm font-medium text-slate-400">Receitas</span>
               <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
@@ -848,7 +848,7 @@ export function Dashboard() {
             <p className="text-lg sm:text-3xl font-bold text-slate-100 mt-2 sm:mt-4">{formatCurrency(summary.income)}</p>
           </div>
 
-          <div className="bg-slate-900/60 border border-slate-800/80 border-l-4 border-l-rose-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+          <div className="bg-slate-900/60 border-2 border-slate-800 border-l-4 border-l-rose-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs sm:text-sm font-medium text-slate-400">Despesas</span>
               <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400">
@@ -858,7 +858,7 @@ export function Dashboard() {
             <p className="text-lg sm:text-3xl font-bold text-slate-100 mt-2 sm:mt-4">{formatCurrency(summary.expense)}</p>
           </div>
 
-          <div className="bg-slate-900/60 border border-slate-800/80 border-l-4 border-l-slate-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+          <div className="bg-slate-900/60 border-2 border-slate-800 border-l-4 border-l-slate-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs sm:text-sm font-medium text-slate-400">Saldo Anterior</span>
               <div className={`p-2 rounded-lg ${previousBalance >= 0 ? 'bg-blue-500/10 text-blue-400' : 'bg-rose-500/10 text-rose-400'}`}>
@@ -870,7 +870,7 @@ export function Dashboard() {
             </p>
           </div>
 
-          <div className="bg-slate-900/60 border border-slate-800/80 border-l-4 border-l-blue-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+          <div className="bg-slate-900/60 border-2 border-slate-800 border-l-4 border-l-blue-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs sm:text-sm font-medium text-slate-400">Saldo Livre</span>
               <div className={`p-2 rounded-lg ${summary.balance >= 0 ? 'bg-blue-500/10 text-blue-400' : 'bg-rose-500/10 text-rose-400'}`}>
@@ -897,7 +897,7 @@ export function Dashboard() {
         </div>
 
         {/* Entradas e saídas */}
-        <div className="md:hidden grid grid-cols-2 gap-2 p-1 bg-slate-900/60 border border-slate-800/80 rounded-xl">
+        <div className="md:hidden grid grid-cols-2 gap-2 p-1 bg-slate-900/60 border border-slate-800 rounded-xl">
           <button
             onClick={() => setMobileTab('income')}
             className={`py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
@@ -922,8 +922,8 @@ export function Dashboard() {
         </div>
 
         {monthTransfers.length > 0 && (
-          <section className="rounded-2xl overflow-hidden border border-slate-800/80 border-t-4 border-t-blue-500 bg-slate-900/60 shadow-sm">
-            <div className="p-4 sm:p-5 flex items-center gap-3 border-b border-slate-800/80">
+          <section className="rounded-2xl overflow-hidden border-2 border-slate-800 border-t-4 border-t-blue-500 bg-slate-900/60 shadow-sm">
+            <div className="p-4 sm:p-5 flex items-center gap-3 border-b border-slate-800">
               <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
                 <ArrowRightLeft className="w-5 h-5" />
               </div>

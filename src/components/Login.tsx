@@ -23,7 +23,7 @@ export function Login() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-slate-900/60 border border-slate-800/80 rounded-2xl p-8 backdrop-blur-sm">
+      <div className="w-full max-w-sm bg-slate-900/60 border border-slate-800 rounded-2xl p-8 backdrop-blur-sm">
         <div className="flex flex-col items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
             <LogIn className="w-6 h-6 text-slate-100" />

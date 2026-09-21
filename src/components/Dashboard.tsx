@@ -15,9 +15,12 @@ import {
   Landmark,
   ArrowRightLeft,
   HelpCircle,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import { CategoryChart } from './CategoryChart';
 import { FixedExpenses, type FixedExpense } from './FixedExpenses';
 import { MonthlyTrend } from './MonthlyTrend';
@@ -56,6 +59,7 @@ const sortByDateDesc = (list: Transaction[]) =>
 
 export function Dashboard() {
   const { logout } = useAuth();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -636,10 +640,10 @@ export function Dashboard() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 shrink-0 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <Wallet className="w-5 h-5 text-white" />
+                <Wallet className="w-5 h-5 text-slate-100" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white truncate">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-slate-100 truncate">
                   Controle de Despesas
                 </h1>
                 <p className="text-slate-400 text-xs sm:text-sm">Seu controle financeiro</p>
@@ -647,15 +651,22 @@ export function Dashboard() {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
+                onClick={toggleTheme}
+                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+                title={theme === 'light' ? 'Tema escuro' : 'Tema claro'}
+              >
+                {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+              </button>
+              <button
                 onClick={() => setIsHelpOpen(true)}
-                className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
                 title="Ajuda"
               >
                 <HelpCircle className="w-5 h-5" />
               </button>
               <button
                 onClick={logout}
-                className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
+                className="p-2.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 border border-slate-800/80 transition-colors cursor-pointer"
                 title="Sair"
               >
                 <LogOut className="w-5 h-5" />
@@ -667,7 +678,7 @@ export function Dashboard() {
             <select
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="w-full sm:w-auto bg-slate-900/60 border border-slate-800/80 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+              className="w-full sm:w-auto bg-slate-900/60 border border-slate-800/80 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="all">Todas as contas</option>
               {accounts.map((acc) => (
@@ -680,17 +691,17 @@ export function Dashboard() {
             <div className="flex items-center justify-between sm:justify-start gap-1 bg-slate-900/60 border border-slate-800/80 rounded-xl px-1 py-1">
               <button
                 onClick={goPrevMonth}
-                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                className="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Mês anterior"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-sm font-medium text-white sm:min-w-[130px] text-center capitalize">
+              <span className="text-sm font-medium text-slate-100 sm:min-w-[130px] text-center capitalize">
                 {monthLabel}
               </span>
               <button
                 onClick={goNextMonth}
-                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                className="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Próximo mês"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -739,7 +750,7 @@ export function Dashboard() {
                 <ArrowUpCircle className="w-5 h-5" />
               </div>
             </div>
-            <p className="text-lg sm:text-3xl font-bold text-white mt-2 sm:mt-4">{formatCurrency(summary.income)}</p>
+            <p className="text-lg sm:text-3xl font-bold text-slate-100 mt-2 sm:mt-4">{formatCurrency(summary.income)}</p>
           </div>
 
           <div className="bg-slate-900/60 border border-slate-800/80 border-l-4 border-l-rose-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
@@ -749,7 +760,7 @@ export function Dashboard() {
                 <ArrowDownCircle className="w-5 h-5" />
               </div>
             </div>
-            <p className="text-lg sm:text-3xl font-bold text-white mt-2 sm:mt-4">{formatCurrency(summary.expense)}</p>
+            <p className="text-lg sm:text-3xl font-bold text-slate-100 mt-2 sm:mt-4">{formatCurrency(summary.expense)}</p>
           </div>
 
           <div className="bg-slate-900/60 border border-slate-800/80 border-l-4 border-l-slate-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
@@ -759,7 +770,7 @@ export function Dashboard() {
                 <Repeat className="w-5 h-5" />
               </div>
             </div>
-            <p className={`text-lg sm:text-3xl font-bold mt-2 sm:mt-4 ${previousBalance >= 0 ? 'text-white' : 'text-rose-400'}`}>
+            <p className={`text-lg sm:text-3xl font-bold mt-2 sm:mt-4 ${previousBalance >= 0 ? 'text-slate-100' : 'text-rose-400'}`}>
               {formatCurrency(previousBalance)}
             </p>
           </div>
@@ -782,29 +793,30 @@ export function Dashboard() {
           transfers={transfers}
           selectedAccountId={selectedAccountId}
           cursor={cursor}
+          theme={theme}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Tabela */}
           <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl overflow-hidden shadow-sm">
             <div className="p-5 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold text-white">Histórico de Transações</h2>
+              <h2 className="text-lg font-semibold text-slate-100">Histórico de Transações</h2>
               <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
                 <button
                   onClick={() => setFilterType('all')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'all' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'all' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-100'}`}
                 >
                   Todas
                 </button>
                 <button
                   onClick={() => setFilterType('income')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'income' ? 'bg-emerald-500/20 text-emerald-400 font-semibold' : 'text-slate-400 hover:text-white'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'income' ? 'bg-emerald-500/20 text-emerald-400 font-semibold' : 'text-slate-400 hover:text-slate-100'}`}
                 >
                   Receitas
                 </button>
                 <button
                   onClick={() => setFilterType('expense')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'expense' ? 'bg-rose-500/20 text-rose-400 font-semibold' : 'text-slate-400 hover:text-white'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'expense' ? 'bg-rose-500/20 text-rose-400 font-semibold' : 'text-slate-400 hover:text-slate-100'}`}
                 >
                   Despesas
                 </button>
@@ -840,7 +852,7 @@ export function Dashboard() {
                     historyRows.map((row) =>
                       row.kind === 'transfer' ? (
                         <tr key={`transfer-${row.id}`} className="hover:bg-slate-800/20 transition-colors bg-blue-500/[0.03]">
-                          <td className="py-4 px-6 font-medium text-white">
+                          <td className="py-4 px-6 font-medium text-slate-100">
                             <span className="inline-flex items-center gap-1.5">
                               <ArrowRightLeft className="w-3.5 h-3.5 text-blue-400" />
                               {row.tr.description || 'Transferência'}
@@ -882,7 +894,7 @@ export function Dashboard() {
                         </tr>
                       ) : (
                         <tr key={row.tx.id} className="hover:bg-slate-800/20 transition-colors">
-                          <td className="py-4 px-6 font-medium text-white">
+                          <td className="py-4 px-6 font-medium text-slate-100">
                             {row.tx.description}
                             {row.tx.installmentTotal && (
                               <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] rounded bg-slate-800 text-slate-400 border border-slate-700/50 align-middle">
@@ -947,7 +959,7 @@ export function Dashboard() {
                   row.kind === 'transfer' ? (
                     <div key={`transfer-${row.id}`} className="p-4 flex items-start justify-between gap-3 bg-blue-500/[0.03]">
                       <div className="min-w-0">
-                        <p className="font-medium text-white truncate flex items-center gap-1.5">
+                        <p className="font-medium text-slate-100 truncate flex items-center gap-1.5">
                           <ArrowRightLeft className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                           {row.tr.description || 'Transferência'}
                         </p>
@@ -983,7 +995,7 @@ export function Dashboard() {
                   ) : (
                     <div key={row.tx.id} className="p-4 flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="font-medium text-white truncate">
+                        <p className="font-medium text-slate-100 truncate">
                           {row.tx.description}
                           {row.tx.installmentTotal && (
                             <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] rounded bg-slate-800 text-slate-400 border border-slate-700/50 align-middle">
@@ -1038,7 +1050,7 @@ export function Dashboard() {
           </div>
 
           {/* Gráfico por categoria */}
-          <CategoryChart transactions={monthTransactions} />
+          <CategoryChart transactions={monthTransactions} theme={theme} />
         </div>
       </div>
 
@@ -1046,7 +1058,7 @@ export function Dashboard() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-4">
+            <h3 className="text-xl font-bold text-slate-100 mb-4">
               {editingTransferId ? 'Editar Transferência' : editingId ? 'Editar Transação' : 'Nova Transação'}
             </h3>
             <form onSubmit={handleAddTransaction} className="space-y-4">
@@ -1056,7 +1068,7 @@ export function Dashboard() {
                     type="button"
                     onClick={() => setFormMode('expense')}
                     className={`py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      formMode === 'expense' ? 'bg-rose-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                      formMode === 'expense' ? 'bg-rose-600 text-white shadow' : 'text-slate-400 hover:text-slate-100'
                     }`}
                   >
                     <ArrowDownCircle className="w-4 h-4" /> Despesa
@@ -1071,7 +1083,7 @@ export function Dashboard() {
                       }
                     }}
                     className={`py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      formMode === 'income' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                      formMode === 'income' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-100'
                     }`}
                   >
                     <ArrowUpCircle className="w-4 h-4" /> Receita
@@ -1081,7 +1093,7 @@ export function Dashboard() {
                       type="button"
                       onClick={() => setFormMode('transfer')}
                       className={`py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        formMode === 'transfer' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                        formMode === 'transfer' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-100'
                       }`}
                     >
                       <ArrowRightLeft className="w-4 h-4" /> Transferência
@@ -1100,7 +1112,7 @@ export function Dashboard() {
                   placeholder="Ex: Aluguel, Salário, Supermercado..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -1114,7 +1126,7 @@ export function Dashboard() {
                     placeholder="0,00"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -1124,7 +1136,7 @@ export function Dashboard() {
                     required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -1148,7 +1160,7 @@ export function Dashboard() {
                         required
                         value={installmentCount}
                         onChange={(e) => setInstallmentCount(e.target.value)}
-                        className="w-20 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                        className="w-20 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
                       />
                       <span className="text-xs text-slate-500">parcelas</span>
                     </div>
@@ -1164,7 +1176,7 @@ export function Dashboard() {
                       value={fromAccountId}
                       required
                       onChange={(e) => setFromAccountId(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
                     >
                       {activeAccounts.map((acc) => (
                         <option key={acc.id} value={acc.id}>
@@ -1179,7 +1191,7 @@ export function Dashboard() {
                       value={toAccountId}
                       required
                       onChange={(e) => setToAccountId(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
                     >
                       {activeAccounts.map((acc) => (
                         <option key={acc.id} value={acc.id}>
@@ -1197,7 +1209,7 @@ export function Dashboard() {
                       <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
                       >
                         <option value="Alimentação">Alimentação</option>
                         <option value="Moradia">Moradia</option>
@@ -1213,7 +1225,7 @@ export function Dashboard() {
                       <select
                         value={paymentMethod}
                         onChange={(e) => setPaymentMethod(e.target.value as any)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
                       >
                         <option value="pix">PIX</option>
                         <option value="credit_card">Crédito</option>
@@ -1229,7 +1241,7 @@ export function Dashboard() {
                       value={accountId}
                       required
                       onChange={(e) => setAccountId(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
                     >
                       {activeAccounts.map((acc) => (
                         <option key={acc.id} value={acc.id}>
@@ -1245,7 +1257,7 @@ export function Dashboard() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>

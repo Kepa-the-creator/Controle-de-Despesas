@@ -44,12 +44,12 @@ export function HelpModal({ onClose }: HelpModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between mb-4 shrink-0">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+          <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
             <HelpCircle className="w-5 h-5 text-blue-400" /> Como o app funciona
           </h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -58,7 +58,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
         <div className="space-y-4 overflow-y-auto pr-1">
           {FAQ.map((item, i) => (
             <div key={i} className="bg-slate-950 border border-slate-800 rounded-xl p-4">
-              <p className="text-sm font-semibold text-white mb-1.5">{item.q}</p>
+              <p className="text-sm font-semibold text-slate-100 mb-1.5">{item.q}</p>
               <p className="text-sm text-slate-400 leading-relaxed">{item.a}</p>
             </div>
           ))}

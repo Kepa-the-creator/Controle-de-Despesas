@@ -103,12 +103,12 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+          <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
             <Repeat className="w-5 h-5 text-blue-400" /> Lançamentos Fixos
           </h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -128,7 +128,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
                     {fe.type === 'income' ? <ArrowUpCircle className="w-3.5 h-3.5" /> : <ArrowDownCircle className="w-3.5 h-3.5" />}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{fe.description}</p>
+                    <p className="text-sm font-medium text-slate-100 truncate">{fe.description}</p>
                     <p className="text-xs text-slate-500">
                       {formatCurrency(fe.amount)} · todo dia {fe.dayOfMonth} · {fe.category} ·{' '}
                       {accounts.find((a) => a.id === fe.account)?.name ?? '-'}
@@ -167,7 +167,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
               type="button"
               onClick={() => setType('expense')}
               className={`py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                type === 'expense' ? 'bg-rose-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                type === 'expense' ? 'bg-rose-600 text-white shadow' : 'text-slate-400 hover:text-slate-100'
               }`}
             >
               <ArrowDownCircle className="w-4 h-4" /> Despesa
@@ -176,7 +176,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
               type="button"
               onClick={() => setType('income')}
               className={`py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                type === 'income' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                type === 'income' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-100'
               }`}
             >
               <ArrowUpCircle className="w-4 h-4" /> Receita
@@ -191,7 +191,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
               placeholder="Ex: Aluguel, Netflix..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
             />
           </div>
 
@@ -205,7 +205,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
                 placeholder="0,00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
               />
             </div>
             <div>
@@ -217,7 +217,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
                 required
                 value={dayOfMonth}
                 onChange={(e) => setDayOfMonth(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
               />
             </div>
             <div>
@@ -225,7 +225,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value as any)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
               >
                 <option value="pix">PIX</option>
                 <option value="credit_card">Crédito</option>
@@ -241,7 +241,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
               >
                 <option value="Alimentação">Alimentação</option>
                 <option value="Moradia">Moradia</option>
@@ -258,7 +258,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
                 value={accountId}
                 required
                 onChange={(e) => setAccountId(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
               >
                 {activeAccounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>

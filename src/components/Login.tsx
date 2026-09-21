@@ -26,9 +26,9 @@ export function Login() {
       <div className="w-full max-w-sm bg-slate-900/60 border border-slate-800/80 rounded-2xl p-8 backdrop-blur-sm">
         <div className="flex flex-col items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <LogIn className="w-6 h-6 text-white" />
+            <LogIn className="w-6 h-6 text-slate-100" />
           </div>
-          <h1 className="text-xl font-bold text-white">Entrar</h1>
+          <h1 className="text-xl font-bold text-slate-100">Entrar</h1>
           <p className="text-slate-400 text-sm text-center">Acesse seus registros financeiros</p>
         </div>
 
@@ -41,7 +41,7 @@ export function Login() {
               autoFocus
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
               placeholder="voce@email.com"
             />
           </div>
@@ -52,7 +52,7 @@ export function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
               placeholder="••••••••"
             />
           </div>

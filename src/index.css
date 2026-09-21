@@ -1,1 +1,28 @@
 @import "tailwindcss";
+
+/* Tema escuro = paleta padrão do Tailwind. Tema claro = a escala "slate"
+   invertida (fundos claros, texto escuro) + tons de destaque mais fortes
+   para manter contraste em fundo claro. */
+:root { color-scheme: dark; }
+body { background: var(--color-slate-950); }
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-slate-50: #0f172a;
+  --color-slate-100: #1e293b;
+  --color-slate-200: #334155;
+  --color-slate-300: #475569;
+  --color-slate-400: #5b6b85;
+  --color-slate-500: #7b89a3;
+  --color-slate-600: #b6c0d2;
+  --color-slate-700: #d3dae7;
+  --color-slate-800: #e3e8f1;
+  --color-slate-900: #ffffff;
+  --color-slate-950: #f3f6fb;
+
+  --color-emerald-400: #059669;
+  --color-rose-400: #e11d48;
+  --color-blue-400: #2563eb;
+  --color-blue-300: #1d4ed8;
+  --color-amber-500: #d97706;
+}

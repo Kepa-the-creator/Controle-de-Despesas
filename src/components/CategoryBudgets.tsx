@@ -66,12 +66,12 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+          <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
             <Gauge className="w-5 h-5 text-blue-400" /> Orçamento por Categoria
           </h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -88,7 +88,7 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose 
               return (
                 <div key={b.id} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm font-medium text-white">{b.category}</span>
+                    <span className="text-sm font-medium text-slate-100">{b.category}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-slate-400">
                         {formatCurrency(spent)} / {formatCurrency(b.limit)}
@@ -119,7 +119,7 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose 
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -138,7 +138,7 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose 
                 placeholder="0,00"
                 value={limit}
                 onChange={(e) => setLimit(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>

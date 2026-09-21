@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   ArrowUpCircle,
   ArrowDownCircle,
@@ -65,6 +65,7 @@ export function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFixedExpensesOpen, setIsFixedExpensesOpen] = useState(false);
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
+  const generatingRef = useRef<Set<string>>(new Set());
   const [isCategoryBudgetsOpen, setIsCategoryBudgetsOpen] = useState(false);
   const [categoryBudgets, setCategoryBudgets] = useState<CategoryBudget[]>([]);
   const [isSavingsGoalsOpen, setIsSavingsGoalsOpen] = useState(false);
@@ -289,17 +290,42 @@ export function Dashboard() {
 
     const cursorMonthStr = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}`;
 
+    // Só gera depois que as transações carregaram; antes disso a lista vem
+    // vazia e tudo pareceria "faltando", duplicando os lançamentos a cada F5.
+    if (loading) return;
+
     const pending = fixedExpenses.filter((fe) => {
       if (!fe.active) return false;
       if (fe.startMonth && cursorMonthStr < fe.startMonth) return false;
+      if (generatingRef.current.has(`${fe.id}:${cursorMonthStr}`)) return false;
       return !transactions.some(
         (t) => t.recurringSource === fe.id && t.date.startsWith(cursorMonthStr)
       );
     });
     if (pending.length === 0) return;
 
+    // Marca como "em andamento" antes de qualquer await, pra reexecuções do
+    // efeito (disparadas pelas próprias criações) não gerarem de novo.
+    for (const fe of pending) generatingRef.current.add(`${fe.id}:${cursorMonthStr}`);
+
     (async () => {
       for (const fe of pending) {
+        const key = `${fe.id}:${cursorMonthStr}`;
+        try {
+          // Confere no servidor: é a fonte da verdade, mesmo que o estado local esteja defasado.
+          const existing = await pb.collection('transactions').getList(1, 1, {
+            filter: pb.filter('recurringSource = {:id} && date >= {:start} && date < {:end}', {
+              id: fe.id,
+              start: `${cursorMonthStr}-01`,
+              end: `${cursor.month === 11 ? cursor.year + 1 : cursor.year}-${String(((cursor.month + 1) % 12) + 1).padStart(2, '0')}-01`,
+            }),
+          });
+          if (existing.totalItems > 0) continue;
+        } catch (err: any) {
+          console.error('Erro ao conferir despesa fixa:', err.message);
+          generatingRef.current.delete(key);
+          continue;
+        }
         const day = Math.min(fe.dayOfMonth, daysInMonth(cursor.year, cursor.month));
         const targetDate = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         try {
@@ -316,10 +342,11 @@ export function Dashboard() {
           });
         } catch (err: any) {
           console.error('Erro ao gerar despesa fixa:', err.message);
+          generatingRef.current.delete(key);
         }
       }
     })();
-  }, [cursor, fixedExpenses, transactions]);
+  }, [cursor, fixedExpenses, transactions, loading]);
 
   // Cadastrar ou editar no banco (o estado é atualizado via assinatura em tempo real)
   const handleAddTransaction = async (e: React.FormEvent) => {

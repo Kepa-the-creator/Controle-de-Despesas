@@ -63,8 +63,8 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="modal-panel bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
             <Gauge className="w-5 h-5 text-blue-400" /> Orçamento por Categoria

@@ -41,8 +41,8 @@ const FAQ = [
 
 export function HelpModal({ onClose }: HelpModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[85vh] flex flex-col">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="modal-panel bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between mb-4 shrink-0">
           <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
             <HelpCircle className="w-5 h-5 text-blue-400" /> Como o app funciona

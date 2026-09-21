@@ -728,8 +728,19 @@ export function Dashboard() {
     );
   };
 
+  const openNewTransaction = () => {
+    const defaultId = selectedAccountId !== 'all' ? selectedAccountId : activeAccounts[0]?.id ?? '';
+    setAccountId(defaultId);
+    setFromAccountId(defaultId);
+    setToAccountId(activeAccounts[1]?.id ?? defaultId);
+    setIsModalOpen(true);
+  };
+
+  const spentPct = summary.income > 0 ? (summary.expense / summary.income) * 100 : summary.expense > 0 ? 100 : 0;
+  const spentBarColor = spentPct >= 100 ? 'bg-rose-500' : spentPct >= 80 ? 'bg-amber-500' : 'bg-emerald-500';
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased p-4 md:p-8 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased p-4 md:p-8 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(5.5rem,env(safe-area-inset-bottom))] sm:pb-8">
       <div className="max-w-6xl mx-auto space-y-8 sm:border-2 sm:border-slate-800 sm:rounded-3xl sm:p-6 sm:shadow-sm">
         <header className="space-y-4 border-b-2 border-slate-800 pb-6">
           <div className="flex items-center justify-between gap-3">
@@ -806,14 +817,8 @@ export function Dashboard() {
 
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
             <button
-              onClick={() => {
-                const defaultId = selectedAccountId !== 'all' ? selectedAccountId : activeAccounts[0]?.id ?? '';
-                setAccountId(defaultId);
-                setFromAccountId(defaultId);
-                setToAccountId(activeAccounts[1]?.id ?? defaultId);
-                setIsModalOpen(true);
-              }}
-              className="col-span-2 sm:col-span-1 sm:order-last flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 sm:py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-600/30 transition-all active:scale-95 cursor-pointer"
+              onClick={openNewTransaction}
+              className="hidden sm:flex sm:order-last items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 sm:py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-600/30 transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-5 h-5" />
               Nova Transação
@@ -837,7 +842,7 @@ export function Dashboard() {
         </header>
 
         {/* Resumo */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+        <div key={`${cursor.year}-${cursor.month}`} className="fade-in grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
           <div className="bg-slate-900/60 border-2 border-slate-800 border-l-4 border-l-emerald-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs sm:text-sm font-medium text-slate-400">Receitas</span>
@@ -856,6 +861,12 @@ export function Dashboard() {
               </div>
             </div>
             <p className="text-lg sm:text-3xl font-bold text-slate-100 mt-2 sm:mt-4">{formatCurrency(summary.expense)}</p>
+            <div className="mt-3 h-2 rounded-full bg-slate-800 overflow-hidden" role="progressbar" aria-valuenow={Math.round(spentPct)} aria-valuemin={0} aria-valuemax={100}>
+              <div className={`h-full ${spentBarColor} transition-all duration-500`} style={{ width: `${Math.min(100, spentPct)}%` }} />
+            </div>
+            <p className="mt-1.5 text-[11px] sm:text-xs text-slate-400">
+              {Math.round(spentPct)}% da receita do mês
+            </p>
           </div>
 
           <div className="bg-slate-900/60 border-2 border-slate-800 border-l-4 border-l-slate-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
@@ -963,9 +974,17 @@ export function Dashboard() {
       </div>
 
       {/* Modal */}
+      <button
+        onClick={openNewTransaction}
+        aria-label="Nova Transação"
+        className="fab-pop sm:hidden fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/40 flex items-center justify-center transition-transform active:scale-90 cursor-pointer"
+      >
+        <Plus className="w-7 h-7" />
+      </button>
+
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+        <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="modal-panel bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <h3 className="text-xl font-bold text-slate-100 mb-4">
               {editingTransferId ? 'Editar Transferência' : editingId ? 'Editar Transação' : 'Nova Transação'}
             </h3>

@@ -74,7 +74,7 @@ export function Dashboard() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
-  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
+  const [mobileTab, setMobileTab] = useState<'income' | 'expense'>('expense');
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
@@ -593,36 +593,20 @@ export function Dashboard() {
     };
   }, [monthTransactions, previousBalance, monthTransferNet]);
 
-  const filteredTransactions = useMemo(() => {
-    if (filterType === 'all') return monthTransactions;
-    return monthTransactions.filter((t) => t.type === filterType);
-  }, [monthTransactions, filterType]);
+  const incomeRows = useMemo(() => monthTransactions.filter((t) => t.type === 'income'), [monthTransactions]);
+  const expenseRows = useMemo(() => monthTransactions.filter((t) => t.type === 'expense'), [monthTransactions]);
 
   // Transferências do mês visível, envolvendo a conta selecionada (ou todas)
   const monthTransfers = useMemo(() => {
-    if (filterType !== 'all') return [];
     const monthPrefix = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}`;
-    return transfers.filter((tr) => {
-      if (!tr.date.startsWith(monthPrefix)) return false;
-      if (selectedAccountId === 'all') return true;
-      return tr.fromAccount === selectedAccountId || tr.toAccount === selectedAccountId;
-    });
-  }, [transfers, cursor, selectedAccountId, filterType]);
-
-  type HistoryRow =
-    | { kind: 'transaction'; id: string; date: string; tx: Transaction }
-    | { kind: 'transfer'; id: string; date: string; tr: Transfer };
-
-  // Histórico combinado (transações + transferências do mês), ordenado por
-  // data — sem isso, uma transferência criada nunca aparecia em lugar
-  // nenhum e parecia que "não tinha acontecido".
-  const historyRows = useMemo<HistoryRow[]>(() => {
-    const rows: HistoryRow[] = [
-      ...filteredTransactions.map((tx) => ({ kind: 'transaction' as const, id: tx.id, date: tx.date, tx })),
-      ...monthTransfers.map((tr) => ({ kind: 'transfer' as const, id: tr.id, date: tr.date, tr })),
-    ];
-    return rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  }, [filteredTransactions, monthTransfers]);
+    return transfers
+      .filter((tr) => {
+        if (!tr.date.startsWith(monthPrefix)) return false;
+        if (selectedAccountId === 'all') return true;
+        return tr.fromAccount === selectedAccountId || tr.toAccount === selectedAccountId;
+      })
+      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  }, [transfers, cursor, selectedAccountId]);
 
   const accountName = (id: string) => accounts.find((a) => a.id === id)?.name ?? '-';
 
@@ -631,6 +615,90 @@ export function Dashboard() {
       style: 'currency',
       currency: 'BRL',
     }).format(val);
+  };
+
+  const shortDate = (d: string) => d.slice(0, 10).split('-').reverse().join('/');
+
+  const iconBtn = 'p-1.5 rounded-lg text-slate-400 transition-colors cursor-pointer';
+
+  const renderTxRow = (tx: Transaction) => (
+    <li key={tx.id} className="flex items-start justify-between gap-3 px-4 sm:px-5 py-3 hover:bg-slate-800/30 transition-colors">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-slate-100 truncate">
+          {tx.description}
+          {tx.installmentTotal && (
+            <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] rounded bg-slate-800 text-slate-400 border border-slate-700/50 align-middle">
+              {tx.installmentIndex}/{tx.installmentTotal}
+            </span>
+          )}
+        </p>
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          <span className="inline-block px-2 py-0.5 text-[11px] rounded-lg bg-slate-800 text-slate-300 border border-slate-700/50">
+            {tx.category}
+          </span>
+          <span className="text-[11px] text-slate-500 uppercase">
+            {tx.paymentMethod ? tx.paymentMethod.replace('_', ' ') : '-'}
+          </span>
+          <span className="text-[11px] text-slate-500">{shortDate(tx.date)}</span>
+          {selectedAccountId === 'all' && (
+            <span className="inline-block px-1.5 py-0.5 text-[10px] rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              {accountName(tx.account)}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        <span className={`text-sm font-semibold ${tx.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
+          {tx.type === 'income' ? '+ ' : '- '}
+          {formatCurrency(tx.amount)}
+        </span>
+        <div className="flex items-center gap-0.5">
+          <button onClick={() => handleEditClick(tx)} className={`${iconBtn} hover:text-blue-400 hover:bg-blue-500/10`} title="Editar">
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button onClick={() => handleDelete(tx.id)} className={`${iconBtn} hover:text-rose-400 hover:bg-rose-500/10`} title="Excluir">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </li>
+  );
+
+  const renderColumn = (kind: 'income' | 'expense', rows: Transaction[], total: number) => {
+    const isIncome = kind === 'income';
+    return (
+      <section
+        className={`${mobileTab === kind ? '' : 'hidden'} md:block rounded-2xl overflow-hidden border border-slate-800/80 border-t-4 ${
+          isIncome ? 'border-t-emerald-500' : 'border-t-rose-500'
+        } bg-slate-900/60 shadow-sm`}
+      >
+        <div className="p-4 sm:p-5 flex items-center justify-between gap-3 border-b border-slate-800/80">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`p-2 rounded-lg ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+              {isIncome ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-semibold text-slate-100">{isIncome ? 'Entradas' : 'Saídas'}</h2>
+              <p className="text-xs text-slate-500">
+                {rows.length} {rows.length === 1 ? 'lançamento' : 'lançamentos'}
+              </p>
+            </div>
+          </div>
+          <span className={`text-lg sm:text-xl font-bold ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {formatCurrency(total)}
+          </span>
+        </div>
+        {loading ? (
+          <p className="py-8 text-center text-slate-500 text-sm">Carregando dados do servidor...</p>
+        ) : rows.length === 0 ? (
+          <p className="py-8 text-center text-slate-500 text-sm">
+            {isIncome ? 'Nenhuma entrada neste período.' : 'Nenhuma saída neste período.'}
+          </p>
+        ) : (
+          <ul className="divide-y divide-slate-800/60 md:max-h-[640px] md:overflow-y-auto">{rows.map(renderTxRow)}</ul>
+        )}
+      </section>
+    );
   };
 
   return (
@@ -788,270 +856,83 @@ export function Dashboard() {
           </div>
         </div>
 
-        <MonthlyTrend
-          transactions={accountFilteredTransactions}
-          transfers={transfers}
-          selectedAccountId={selectedAccountId}
-          cursor={cursor}
-          theme={theme}
-        />
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Tabela */}
-          <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-5 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold text-slate-100">Histórico de Transações</h2>
-              <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
-                <button
-                  onClick={() => setFilterType('all')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'all' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-100'}`}
-                >
-                  Todas
-                </button>
-                <button
-                  onClick={() => setFilterType('income')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'income' ? 'bg-emerald-500/20 text-emerald-400 font-semibold' : 'text-slate-400 hover:text-slate-100'}`}
-                >
-                  Receitas
-                </button>
-                <button
-                  onClick={() => setFilterType('expense')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'expense' ? 'bg-rose-500/20 text-rose-400 font-semibold' : 'text-slate-400 hover:text-slate-100'}`}
-                >
-                  Despesas
-                </button>
-              </div>
-            </div>
-
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-800/60 text-xs text-slate-400 font-medium uppercase tracking-wider">
-                    <th className="py-3 px-6">Descrição</th>
-                    <th className="py-3 px-6">Categoria</th>
-                    <th className="py-3 px-6">Método</th>
-                    <th className="py-3 px-6">Data</th>
-                    <th className="py-3 px-6 text-right">Valor</th>
-                    <th className="py-3 px-6 text-center">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/40 text-sm">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-500">
-                        Carregando dados do servidor...
-                      </td>
-                    </tr>
-                  ) : historyRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-500">
-                        Nenhuma transação cadastrada neste período.
-                      </td>
-                    </tr>
-                  ) : (
-                    historyRows.map((row) =>
-                      row.kind === 'transfer' ? (
-                        <tr key={`transfer-${row.id}`} className="hover:bg-slate-800/20 transition-colors bg-blue-500/[0.03]">
-                          <td className="py-4 px-6 font-medium text-slate-100">
-                            <span className="inline-flex items-center gap-1.5">
-                              <ArrowRightLeft className="w-3.5 h-3.5 text-blue-400" />
-                              {row.tr.description || 'Transferência'}
-                            </span>
-                            <div className="text-xs text-slate-500 mt-0.5">
-                              {accountName(row.tr.fromAccount)} → {accountName(row.tr.toAccount)}
-                            </div>
-                          </td>
-                          <td className="py-4 px-6">
-                            <span className="inline-block px-2.5 py-1 text-xs rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                              Transferência
-                            </span>
-                          </td>
-                          <td className="py-4 px-6 text-slate-400 uppercase text-xs">-</td>
-                          <td className="py-4 px-6 text-slate-400">
-                            {row.tr.date.slice(0, 10).split('-').reverse().join('/')}
-                          </td>
-                          <td className="py-4 px-6 text-right font-semibold text-blue-400">
-                            {formatCurrency(row.tr.amount)}
-                          </td>
-                          <td className="py-4 px-6 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => handleEditTransferClick(row.tr)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
-                                title="Editar"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteTransfer(row.tr.id)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                                title="Excluir"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ) : (
-                        <tr key={row.tx.id} className="hover:bg-slate-800/20 transition-colors">
-                          <td className="py-4 px-6 font-medium text-slate-100">
-                            {row.tx.description}
-                            {row.tx.installmentTotal && (
-                              <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] rounded bg-slate-800 text-slate-400 border border-slate-700/50 align-middle">
-                                {row.tx.installmentIndex}/{row.tx.installmentTotal}
-                              </span>
-                            )}
-                            {selectedAccountId === 'all' && (
-                              <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 align-middle">
-                                {accountName(row.tx.account)}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-4 px-6">
-                            <span className="inline-block px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-300 border border-slate-700/50">
-                              {row.tx.category}
-                            </span>
-                          </td>
-                          <td className="py-4 px-6 text-slate-400 uppercase text-xs">
-                            {row.tx.paymentMethod ? row.tx.paymentMethod.replace('_', ' ') : '-'}
-                          </td>
-                          <td className="py-4 px-6 text-slate-400">
-                            {row.tx.date.slice(0, 10).split('-').reverse().join('/')}
-                          </td>
-                          <td className={`py-4 px-6 text-right font-semibold ${row.tx.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {row.tx.type === 'income' ? '+ ' : '- '}
-                            {formatCurrency(row.tx.amount)}
-                          </td>
-                          <td className="py-4 px-6 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => handleEditClick(row.tx)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
-                                title="Editar"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(row.tx.id)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                                title="Excluir"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    )
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Cards (mobile) */}
-            <div className="md:hidden divide-y divide-slate-800/40">
-              {loading ? (
-                <p className="py-8 text-center text-slate-500 text-sm">Carregando dados do servidor...</p>
-              ) : historyRows.length === 0 ? (
-                <p className="py-8 text-center text-slate-500 text-sm">Nenhuma transação cadastrada neste período.</p>
-              ) : (
-                historyRows.map((row) =>
-                  row.kind === 'transfer' ? (
-                    <div key={`transfer-${row.id}`} className="p-4 flex items-start justify-between gap-3 bg-blue-500/[0.03]">
-                      <div className="min-w-0">
-                        <p className="font-medium text-slate-100 truncate flex items-center gap-1.5">
-                          <ArrowRightLeft className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                          {row.tr.description || 'Transferência'}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          <span className="inline-block px-2 py-0.5 text-[11px] rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                            {accountName(row.tr.fromAccount)} → {accountName(row.tr.toAccount)}
-                          </span>
-                          <span className="text-[11px] text-slate-500">
-                            {row.tr.date.slice(0, 10).split('-').reverse().join('/')}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        <span className="font-semibold text-sm text-blue-400">{formatCurrency(row.tr.amount)}</span>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleEditTransferClick(row.tr)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
-                            title="Editar"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTransfer(row.tr.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                            title="Excluir"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div key={row.tx.id} className="p-4 flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-medium text-slate-100 truncate">
-                          {row.tx.description}
-                          {row.tx.installmentTotal && (
-                            <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] rounded bg-slate-800 text-slate-400 border border-slate-700/50 align-middle">
-                              {row.tx.installmentIndex}/{row.tx.installmentTotal}
-                            </span>
-                          )}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          <span className="inline-block px-2 py-0.5 text-[11px] rounded-lg bg-slate-800 text-slate-300 border border-slate-700/50">
-                            {row.tx.category}
-                          </span>
-                          <span className="text-[11px] text-slate-500 uppercase">
-                            {row.tx.paymentMethod ? row.tx.paymentMethod.replace('_', ' ') : '-'}
-                          </span>
-                          <span className="text-[11px] text-slate-500">
-                            {row.tx.date.slice(0, 10).split('-').reverse().join('/')}
-                          </span>
-                          {selectedAccountId === 'all' && (
-                            <span className="inline-block px-1.5 py-0.5 text-[10px] rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                              {accountName(row.tx.account)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        <span className={`font-semibold text-sm ${row.tx.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {row.tx.type === 'income' ? '+ ' : '- '}
-                          {formatCurrency(row.tx.amount)}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleEditClick(row.tx)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
-                            title="Editar"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(row.tx.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                            title="Excluir"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                )
-              )}
-            </div>
+          <div className="lg:col-span-2">
+            <MonthlyTrend
+              transactions={accountFilteredTransactions}
+              transfers={transfers}
+              selectedAccountId={selectedAccountId}
+              cursor={cursor}
+              theme={theme}
+            />
           </div>
-
-          {/* Gráfico por categoria */}
           <CategoryChart transactions={monthTransactions} theme={theme} />
         </div>
+
+        {/* Entradas e saídas */}
+        <div className="md:hidden grid grid-cols-2 gap-2 p-1 bg-slate-900/60 border border-slate-800/80 rounded-xl">
+          <button
+            onClick={() => setMobileTab('income')}
+            className={`py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+              mobileTab === 'income' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400'
+            }`}
+          >
+            Entradas
+          </button>
+          <button
+            onClick={() => setMobileTab('expense')}
+            className={`py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+              mobileTab === 'expense' ? 'bg-rose-600 text-white shadow' : 'text-slate-400'
+            }`}
+          >
+            Saídas
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+          {renderColumn('income', incomeRows, summary.income)}
+          {renderColumn('expense', expenseRows, summary.expense)}
+        </div>
+
+        {monthTransfers.length > 0 && (
+          <section className="rounded-2xl overflow-hidden border border-slate-800/80 border-t-4 border-t-blue-500 bg-slate-900/60 shadow-sm">
+            <div className="p-4 sm:p-5 flex items-center gap-3 border-b border-slate-800/80">
+              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                <ArrowRightLeft className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base sm:text-lg font-semibold text-slate-100">Transferências</h2>
+                <p className="text-xs text-slate-500">Movimentação entre suas contas (não conta como entrada nem saída)</p>
+              </div>
+            </div>
+            <ul className="divide-y divide-slate-800/60">
+              {monthTransfers.map((tr) => (
+                <li key={tr.id} className="flex items-start justify-between gap-3 px-4 sm:px-5 py-3 hover:bg-slate-800/30 transition-colors">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-100 truncate">{tr.description || 'Transferência'}</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="inline-block px-2 py-0.5 text-[11px] rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        {accountName(tr.fromAccount)} → {accountName(tr.toAccount)}
+                      </span>
+                      <span className="text-[11px] text-slate-500">{shortDate(tr.date)}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="text-sm font-semibold text-blue-400">{formatCurrency(tr.amount)}</span>
+                    <div className="flex items-center gap-0.5">
+                      <button onClick={() => handleEditTransferClick(tr)} className={`${iconBtn} hover:text-blue-400 hover:bg-blue-500/10`} title="Editar">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteTransfer(tr.id)} className={`${iconBtn} hover:text-rose-400 hover:bg-rose-500/10`} title="Excluir">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
 
       {/* Modal */}

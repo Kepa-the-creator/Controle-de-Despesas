@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Plus, Trash2, Gauge, X } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import type { Transaction } from './Dashboard';
+import { toast } from '../lib/toast';
 
 export interface CategoryBudget {
   id: string;
@@ -49,7 +50,7 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose 
       }
       setLimit('');
     } catch (err: any) {
-      alert('Erro ao salvar orçamento: ' + err.message);
+      toast.error('Erro ao salvar orçamento: ' + err.message);
     }
   };
 
@@ -58,7 +59,7 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose 
       await pb.collection('category_budgets').delete(id);
       onChange(budgets.filter((b) => b.id !== id));
     } catch (err: any) {
-      alert('Erro ao excluir orçamento: ' + err.message);
+      toast.error('Erro ao excluir orçamento: ' + err.message);
     }
   };
 

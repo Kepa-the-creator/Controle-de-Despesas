@@ -29,6 +29,8 @@ import { SavingsGoals, type SavingsGoal } from './SavingsGoals';
 import { Accounts, type Account } from './Accounts';
 import { HelpModal } from './HelpModal';
 import { addMonthsClamped, daysInMonth, todayLocal } from '../lib/date';
+import { toast } from '../lib/toast';
+import { categoryStyle } from '../lib/categories';
 
 export interface Transaction {
   id: string;
@@ -358,7 +360,7 @@ export function Dashboard() {
 
     if (editingTransferId) {
       if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) {
-        alert('Escolha duas contas diferentes para a transferência.');
+        toast.error('Escolha duas contas diferentes para a transferência.');
         return;
       }
       try {
@@ -371,7 +373,7 @@ export function Dashboard() {
         });
         closeModal();
       } catch (err: any) {
-        alert('Erro ao salvar transferência: ' + err.message);
+        toast.error('Erro ao salvar transferência: ' + err.message);
       }
       return;
     }
@@ -390,18 +392,18 @@ export function Dashboard() {
         });
         closeModal();
       } catch (err: any) {
-        alert('Erro ao salvar alterações: ' + err.message);
+        toast.error('Erro ao salvar alterações: ' + err.message);
       }
       return;
     }
 
     if (formMode === 'transfer') {
       if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) {
-        alert('Escolha duas contas diferentes para a transferência.');
+        toast.error('Escolha duas contas diferentes para a transferência.');
         return;
       }
       if (!validAccountIds.has(fromAccountId) || !validAccountIds.has(toAccountId)) {
-        alert('Uma das contas selecionadas não existe mais. Feche este formulário e tente de novo.');
+        toast.error('Uma das contas selecionadas não existe mais. Feche este formulário e tente de novo.');
         return;
       }
       try {
@@ -415,14 +417,14 @@ export function Dashboard() {
         });
         closeModal();
       } catch (err: any) {
-        alert('Erro ao registrar transferência: ' + err.message);
+        toast.error('Erro ao registrar transferência: ' + err.message);
       }
       return;
     }
 
     if (!description) return;
     if (!validAccountIds.has(accountId)) {
-      alert('A conta selecionada não existe mais. Feche este formulário e tente de novo.');
+      toast.error('A conta selecionada não existe mais. Feche este formulário e tente de novo.');
       return;
     }
     const installments = isInstallment ? Math.max(2, parseInt(installmentCount, 10) || 2) : 1;
@@ -468,7 +470,7 @@ export function Dashboard() {
 
       closeModal();
     } catch (err: any) {
-      alert('Erro ao salvar no banco: ' + err.message);
+      toast.error('Erro ao salvar no banco: ' + err.message);
     }
   };
 
@@ -518,7 +520,7 @@ export function Dashboard() {
     try {
       await pb.collection('transfers').delete(id);
     } catch (err: any) {
-      alert('Erro ao excluir transferência: ' + err.message);
+      toast.error('Erro ao excluir transferência: ' + err.message);
     }
   };
 
@@ -527,7 +529,7 @@ export function Dashboard() {
     try {
       await pb.collection('transactions').delete(id);
     } catch (err: any) {
-      alert('Erro ao excluir: ' + err.message);
+      toast.error('Erro ao excluir: ' + err.message);
     }
   };
 
@@ -646,11 +648,26 @@ export function Dashboard() {
 
   const shortDate = (d: string) => d.slice(0, 10).split('-').reverse().join('/');
 
+  const dayLabel = (d: string) => {
+    const [y, m, day] = d.slice(0, 10).split('-').map(Number);
+    const weekday = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(new Date(y, m - 1, day));
+    const w = weekday.replace('.', '');
+    return `${w.charAt(0).toUpperCase()}${w.slice(1)}, ${String(day).padStart(2, '0')}`;
+  };
+
   const iconBtn = 'p-1.5 rounded-lg text-slate-400 transition-colors cursor-pointer';
 
   const renderTxRow = (tx: Transaction) => (
     <li key={tx.id} className="flex items-start justify-between gap-3 px-4 sm:px-5 py-3 hover:bg-slate-800/30 transition-colors">
-      <div className="min-w-0">
+      {(() => {
+        const { icon: CatIcon, cls } = categoryStyle(tx.category);
+        return (
+          <div className={`mt-0.5 w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${cls}`} aria-hidden="true">
+            <CatIcon className="w-4.5 h-4.5" />
+          </div>
+        );
+      })()}
+      <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-slate-100 truncate">
           {tx.description}
           {tx.installmentTotal && (
@@ -666,7 +683,6 @@ export function Dashboard() {
           <span className="text-[11px] text-slate-500 uppercase">
             {tx.paymentMethod ? tx.paymentMethod.replace('_', ' ') : '-'}
           </span>
-          <span className="text-[11px] text-slate-500">{shortDate(tx.date)}</span>
           {selectedAccountId === 'all' && (
             <span className="inline-block px-1.5 py-0.5 text-[10px] rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
               {accountName(tx.account)}
@@ -690,6 +706,17 @@ export function Dashboard() {
       </div>
     </li>
   );
+
+  const groupByDay = (rows: Transaction[]) => {
+    const groups = new Map<string, Transaction[]>();
+    for (const tx of rows) {
+      const day = tx.date.slice(0, 10);
+      const list = groups.get(day);
+      if (list) list.push(tx);
+      else groups.set(day, [tx]);
+    }
+    return Array.from(groups.entries());
+  };
 
   const renderColumn = (kind: 'income' | 'expense', rows: Transaction[], total: number) => {
     const isIncome = kind === 'income';
@@ -716,20 +743,61 @@ export function Dashboard() {
           </span>
         </div>
         {loading ? (
-          <p className="py-8 text-center text-slate-500 text-sm">Carregando dados do servidor...</p>
+          <ul className="divide-y divide-slate-800/60" aria-busy="true" aria-label="Carregando">
+            {[0, 1, 2, 3].map((i) => (
+              <li key={i} className="flex items-center gap-3 px-4 sm:px-5 py-3.5 animate-pulse">
+                <div className="w-9 h-9 rounded-full bg-slate-800 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-2/3 rounded bg-slate-800" />
+                  <div className="h-2.5 w-1/3 rounded bg-slate-800" />
+                </div>
+                <div className="h-3 w-16 rounded bg-slate-800" />
+              </li>
+            ))}
+          </ul>
         ) : rows.length === 0 ? (
-          <p className="py-8 text-center text-slate-500 text-sm">
-            {isIncome ? 'Nenhuma entrada neste período.' : 'Nenhuma saída neste período.'}
-          </p>
+          <div className="py-10 px-4 flex flex-col items-center text-center gap-3">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isIncome ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+              {isIncome ? <ArrowUpCircle className="w-6 h-6" /> : <ArrowDownCircle className="w-6 h-6" />}
+            </div>
+            <p className="text-sm text-slate-400">
+              {isIncome ? 'Nenhuma entrada neste mês.' : 'Nenhuma saída neste mês.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => openNewTransaction(kind)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white transition-colors cursor-pointer ${
+                isIncome ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-rose-600 hover:bg-rose-500'
+              }`}
+            >
+              <Plus className="w-4 h-4" /> {isIncome ? 'Adicionar entrada' : 'Adicionar saída'}
+            </button>
+          </div>
         ) : (
-          <ul className="divide-y divide-slate-800/60 md:max-h-[640px] md:overflow-y-auto">{rows.map(renderTxRow)}</ul>
+          <div className="md:max-h-[640px] md:overflow-y-auto">
+            {groupByDay(rows).map(([day, dayRows]) => (
+              <div key={day}>
+                <div className="flex items-center justify-between px-4 sm:px-5 py-1.5 bg-slate-800/40 border-y border-slate-800 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <span>{dayLabel(day)}</span>
+                  <span>{formatCurrency(dayRows.reduce((sum, t) => sum + Number(t.amount), 0))}</span>
+                </div>
+                <ul className="divide-y divide-slate-800/60">{dayRows.map(renderTxRow)}</ul>
+              </div>
+            ))}
+          </div>
         )}
       </section>
     );
   };
 
-  const openNewTransaction = () => {
-    const defaultId = selectedAccountId !== 'all' ? selectedAccountId : activeAccounts[0]?.id ?? '';
+  const openNewTransaction = (kind: 'income' | 'expense' = 'expense') => {
+    const defaultId =
+      kind === 'income'
+        ? (accounts.find((a) => a.name === 'Conta Corrente') ?? activeAccounts[0])?.id ?? ''
+        : selectedAccountId !== 'all'
+          ? selectedAccountId
+          : activeAccounts[0]?.id ?? '';
+    setFormMode(kind);
     setAccountId(defaultId);
     setFromAccountId(defaultId);
     setToAccountId(activeAccounts[1]?.id ?? defaultId);
@@ -817,7 +885,7 @@ export function Dashboard() {
 
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
             <button
-              onClick={openNewTransaction}
+              onClick={() => openNewTransaction()}
               className="hidden sm:flex sm:order-last items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 sm:py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-600/30 transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-5 h-5" />
@@ -850,7 +918,7 @@ export function Dashboard() {
                 <ArrowUpCircle className="w-5 h-5" />
               </div>
             </div>
-            <p className="text-lg sm:text-3xl font-bold text-slate-100 mt-2 sm:mt-4">{formatCurrency(summary.income)}</p>
+            <p className="text-lg sm:text-3xl font-bold text-slate-100 mt-2 sm:mt-4">{loading ? <span className="inline-block h-6 sm:h-8 w-24 sm:w-36 rounded bg-slate-800 animate-pulse align-middle" /> : formatCurrency(summary.income)}</p>
           </div>
 
           <div className="bg-slate-900/60 border-2 border-slate-800 border-l-4 border-l-rose-500 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
@@ -860,7 +928,7 @@ export function Dashboard() {
                 <ArrowDownCircle className="w-5 h-5" />
               </div>
             </div>
-            <p className="text-lg sm:text-3xl font-bold text-slate-100 mt-2 sm:mt-4">{formatCurrency(summary.expense)}</p>
+            <p className="text-lg sm:text-3xl font-bold text-slate-100 mt-2 sm:mt-4">{loading ? <span className="inline-block h-6 sm:h-8 w-24 sm:w-36 rounded bg-slate-800 animate-pulse align-middle" /> : formatCurrency(summary.expense)}</p>
             <div className="mt-3 h-2 rounded-full bg-slate-800 overflow-hidden" role="progressbar" aria-valuenow={Math.round(spentPct)} aria-valuemin={0} aria-valuemax={100}>
               <div className={`h-full ${spentBarColor} transition-all duration-500`} style={{ width: `${Math.min(100, spentPct)}%` }} />
             </div>
@@ -877,7 +945,7 @@ export function Dashboard() {
               </div>
             </div>
             <p className={`text-lg sm:text-3xl font-bold mt-2 sm:mt-4 ${previousBalance >= 0 ? 'text-slate-100' : 'text-rose-400'}`}>
-              {formatCurrency(previousBalance)}
+              {loading ? <span className="inline-block h-6 sm:h-8 w-24 sm:w-36 rounded bg-slate-800 animate-pulse align-middle" /> : formatCurrency(previousBalance)}
             </p>
           </div>
 
@@ -889,7 +957,7 @@ export function Dashboard() {
               </div>
             </div>
             <p className={`text-lg sm:text-3xl font-bold mt-2 sm:mt-4 ${summary.balance >= 0 ? 'text-blue-400' : 'text-rose-400'}`}>
-              {formatCurrency(summary.balance)}
+              {loading ? <span className="inline-block h-6 sm:h-8 w-24 sm:w-36 rounded bg-slate-800 animate-pulse align-middle" /> : formatCurrency(summary.balance)}
             </p>
           </div>
         </div>
@@ -975,7 +1043,7 @@ export function Dashboard() {
 
       {/* Modal */}
       <button
-        onClick={openNewTransaction}
+        onClick={() => openNewTransaction()}
         aria-label="Nova Transação"
         className="fab-pop sm:hidden fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/40 flex items-center justify-center transition-transform active:scale-90 cursor-pointer"
       >

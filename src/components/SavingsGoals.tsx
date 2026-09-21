@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { Plus, Trash2, Target, X, Coins } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import { todayLocal } from '../lib/date';
+import { toast } from '../lib/toast';
 
 export interface SavingsGoal {
   id: string;
@@ -76,7 +77,7 @@ export function SavingsGoals({ goals, onChange, cursor, onClose }: SavingsGoalsP
       setTargetDate('');
       setPeriod('monthly');
     } catch (err: any) {
-      alert('Erro ao criar meta: ' + err.message);
+      toast.error('Erro ao criar meta: ' + err.message);
     }
   };
 
@@ -86,7 +87,7 @@ export function SavingsGoals({ goals, onChange, cursor, onClose }: SavingsGoalsP
       onChange(goals.filter((g) => g.id !== id));
       setContributions((prev) => prev.filter((c) => c.goal !== id));
     } catch (err: any) {
-      alert('Erro ao excluir meta: ' + err.message);
+      toast.error('Erro ao excluir meta: ' + err.message);
     }
   };
 
@@ -103,7 +104,7 @@ export function SavingsGoals({ goals, onChange, cursor, onClose }: SavingsGoalsP
       setContributingGoalId(null);
       setContributionAmount('');
     } catch (err: any) {
-      alert('Erro ao registrar aporte: ' + err.message);
+      toast.error('Erro ao registrar aporte: ' + err.message);
     }
   };
 

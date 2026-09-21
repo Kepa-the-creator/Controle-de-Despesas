@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Plus, Trash2, Repeat, X, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { pb } from '../services/pocketbase';
+import { toast } from '../lib/toast';
 
 export interface FixedExpense {
   id: string;
@@ -65,7 +66,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
       setType('expense');
       setDayOfMonth('5');
     } catch (err: any) {
-      alert('Erro ao salvar lançamento fixo: ' + err.message);
+      toast.error('Erro ao salvar lançamento fixo: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -76,7 +77,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
       await pb.collection('fixed_expenses').update(fe.id, { active: !fe.active });
       onChange(fixedExpenses.map((item) => (item.id === fe.id ? { ...item, active: !item.active } : item)));
     } catch (err: any) {
-      alert('Erro ao atualizar despesa fixa: ' + err.message);
+      toast.error('Erro ao atualizar despesa fixa: ' + err.message);
     }
   };
 
@@ -92,7 +93,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
       await pb.collection('fixed_expenses').delete(id);
       onChange(fixedExpenses.filter((item) => item.id !== id));
     } catch (err: any) {
-      alert('Erro ao excluir despesa fixa: ' + err.message);
+      toast.error('Erro ao excluir despesa fixa: ' + err.message);
     }
   };
 

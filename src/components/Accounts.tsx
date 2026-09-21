@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Plus, Trash2, Landmark, X, Pencil, Check } from 'lucide-react';
 import { pb } from '../services/pocketbase';
+import { toast } from '../lib/toast';
 
 export interface Account {
   id: string;
@@ -69,7 +70,7 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
       setName('');
       setInitialBalance('0');
     } catch (err: any) {
-      alert('Erro ao criar conta: ' + err.message);
+      toast.error('Erro ao criar conta: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +81,7 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
       await pb.collection('accounts').update(acc.id, { active: !acc.active });
       onChange(accounts.map((a) => (a.id === acc.id ? { ...a, active: !a.active } : a)));
     } catch (err: any) {
-      alert('Erro ao atualizar conta: ' + err.message);
+      toast.error('Erro ao atualizar conta: ' + err.message);
     }
   };
 
@@ -97,7 +98,7 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
       onChange(accounts.filter((a) => a.id !== id));
     } catch (err: any) {
       const isBlockedByRelation = /required relation/i.test(err.message || '');
-      alert(
+      toast.error(
         isBlockedByRelation
           ? 'Não é possível excluir: essa conta ainda tem transações ou lançamentos fixos vinculados a ela. Mova ou apague-os primeiro.'
           : 'Erro ao excluir conta: ' + err.message
@@ -121,7 +122,7 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
       );
       setEditingId(null);
     } catch (err: any) {
-      alert('Erro ao renomear conta: ' + err.message);
+      toast.error('Erro ao renomear conta: ' + err.message);
     }
   };
 

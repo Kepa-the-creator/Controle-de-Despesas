@@ -1,0 +1,26 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_POCKETBASE_URL: ${PUBLIC_POCKETBASE_URL}
+    restart: unless-stopped
+    ports:
+      # Só escuta em loopback: quem expõe pra internet é o Traefik já
+      # instalado nesta VPS (host network), lendo /docker/traefik/dynamic/.
+      - "127.0.0.1:${FRONTEND_PORT:-8081}:80"
+
+  pocketbase:
+    build:
+      context: ./pocketbase
+      args:
+        PB_VERSION: ${PB_VERSION:-0.28.2}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${POCKETBASE_PORT:-8091}:8090"
+    volumes:
+      - pb_data:/pb/pb_data
+
+volumes:
+  pb_data:

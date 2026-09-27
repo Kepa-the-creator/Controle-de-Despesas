@@ -1,3 +1,43 @@
+## Deploy numa VPS que já tem Traefik (não usar o Caddy deste repo)
+
+Quando a VPS já roda outros serviços atrás de um Traefik existente (caso da
+migração de set/2026, VPS Localweb `srv2001526`), não suba o serviço `caddy`
+daqui — ele brigaria com o Traefik pelas portas 80/443. Use
+`docker-compose.traefik.yml` em vez do `docker-compose.yml` padrão:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.traefik.yml up -d --build
+```
+
+Ele publica frontend/PocketBase só em `127.0.0.1` (portas configuráveis via
+`FRONTEND_PORT`/`POCKETBASE_PORT` no `.env.production`, padrão 8081/8091 —
+confira com `ss -tlnp` quais portas já estão em uso antes de subir). Depois,
+crie um arquivo em `/docker/traefik/dynamic/<projeto>.yml` na VPS, no mesmo
+formato dos outros serviços dela, apontando para essas portas:
+
+```yaml
+http:
+  routers:
+    despesas-frontend:
+      rule: "Host(`controledespesas.duckdns.org`)"
+      entryPoints: [websecure]
+      service: despesas-frontend
+      tls: { certResolver: letsencrypt }
+    despesas-pocketbase:
+      rule: "Host(`controledespesas-pb.duckdns.org`)"
+      entryPoints: [websecure]
+      service: despesas-pocketbase
+      tls: { certResolver: letsencrypt }
+  services:
+    despesas-frontend:
+      loadBalancer: { servers: [{ url: "http://127.0.0.1:8081" }] }
+    despesas-pocketbase:
+      loadBalancer: { servers: [{ url: "http://127.0.0.1:8091" }] }
+```
+
+O Traefik já assiste essa pasta (`--providers.file.watch=true`), então o
+arquivo entra em vigor sozinho, sem reiniciar nada.
+
 # Deploy em VPS (migração do Coolify)
 
 Este projeto roda em Docker puro numa VPS, sem depender do Coolify. A pilha

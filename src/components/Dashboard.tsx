@@ -690,7 +690,7 @@ export function Dashboard() {
  <div className="min-w-0 flex-1">
  <p className="text-sm font-medium text-ink truncate">
  {tx.description}
- {tx.installmentTotal && (
+ {Boolean(tx.installmentTotal) && (
  <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] tabular rounded-sm bg-paper-hover text-ink-soft border border-rule align-middle">
  {tx.installmentIndex}/{tx.installmentTotal}
  </span>

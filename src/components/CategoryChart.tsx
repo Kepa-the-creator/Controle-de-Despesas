@@ -3,7 +3,8 @@ import type { Transaction } from './Dashboard';
 import type { Theme } from '../hooks/useTheme';
 import { chartTheme } from '../lib/chartTheme';
 
-const COLORS = ['#3b82f6', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+// Mesma família de tons de tinta usada nos selos de categoria (src/lib/categories.ts)
+const COLORS = ['#b08628', '#2b4c7e', '#8b5a83', '#3e8a88', '#2f6f4e', '#a8623c', '#9a3b34', '#6b7260'];
 
 interface CategoryChartProps {
   transactions: Transaction[];
@@ -26,11 +27,11 @@ export function CategoryChart({ transactions, theme }: CategoryChartProps) {
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
-    <div className="bg-slate-900/60 border-2 border-slate-800 rounded-2xl p-6 backdrop-blur-sm">
-      <h2 className="text-lg font-semibold text-slate-100 mb-4">Despesas por Categoria</h2>
+    <div className="bg-paper-raised border border-rule rounded-md p-6">
+      <h2 className="text-lg font-semibold text-ink mb-4">Despesas por categoria</h2>
       {data.length === 0 ? (
         <div className="flex items-center justify-center h-[280px]">
-          <p className="text-slate-500 text-sm">Sem despesas neste período.</p>
+          <p className="text-ink-soft text-sm">Sem despesas neste período.</p>
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={280}>

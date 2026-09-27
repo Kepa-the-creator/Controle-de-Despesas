@@ -2,18 +2,23 @@ import { Utensils, House, Gamepad2, Car, Banknote, Briefcase, Tag, type LucideIc
 
 interface CategoryStyle {
   icon: LucideIcon;
-  cls: string;
+  /** Cor de tinta da categoria — mesma nos dois temas, funciona sobre
+   * papel claro ou escuro. Usada no contorno e no ícone do selo, não
+   * como fundo preenchido (isso fica pro papel por trás). */
+  color: string;
 }
 
+// Tons de tinta/selo, um por categoria — o suficiente pra escanear a lista
+// visualmente sem virar um mosaico colorido de badges de SaaS.
 const STYLES: Record<string, CategoryStyle> = {
-  Alimentação: { icon: Utensils, cls: 'bg-amber-500/15 text-amber-500' },
-  Moradia: { icon: House, cls: 'bg-blue-500/15 text-blue-400' },
-  Lazer: { icon: Gamepad2, cls: 'bg-fuchsia-500/15 text-fuchsia-500' },
-  Transporte: { icon: Car, cls: 'bg-cyan-500/15 text-cyan-500' },
-  Salário: { icon: Banknote, cls: 'bg-emerald-500/15 text-emerald-400' },
-  Freela: { icon: Briefcase, cls: 'bg-violet-500/15 text-violet-500' },
+  Alimentação: { icon: Utensils, color: '#b08628' },
+  Moradia: { icon: House, color: '#2b4c7e' },
+  Lazer: { icon: Gamepad2, color: '#8b5a83' },
+  Transporte: { icon: Car, color: '#3e8a88' },
+  Salário: { icon: Banknote, color: '#2f6f4e' },
+  Freela: { icon: Briefcase, color: '#a8623c' },
 };
 
-const FALLBACK: CategoryStyle = { icon: Tag, cls: 'bg-slate-500/15 text-slate-400' };
+const FALLBACK: CategoryStyle = { icon: Tag, color: '#6b7260' };
 
 export const categoryStyle = (category: string): CategoryStyle => STYLES[category] ?? FALLBACK;

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Plus, Trash2, Repeat, X, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import { toast } from '../lib/toast';
+import { categoryStyle, type Category } from '../lib/categories';
 
 export interface FixedExpense {
  id: string;
@@ -26,15 +27,20 @@ interface FixedExpensesProps {
  fixedExpenses: FixedExpense[];
  onChange: (list: FixedExpense[]) => void;
  accounts: AccountOption[];
+ categories: Category[];
  onClose: () => void;
 }
 
-export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: FixedExpensesProps) {
+export function FixedExpenses({ fixedExpenses, onChange, accounts, categories, onClose }: FixedExpensesProps) {
  const activeAccounts = accounts.filter((a) => a.active !== false);
  const [description, setDescription] = useState('');
  const [amount, setAmount] = useState('');
  const [type, setType] = useState<'income' | 'expense'>('expense');
- const [category, setCategory] = useState('Moradia');
+ const [category, setCategory] = useState('');
+ // Cai pra primeira categoria carregada até a pessoa escolher outra —
+ // sem efeito, é só o valor mostrado/enviado quando `category` ainda
+ // está vazio (ex: categorias chegaram depois do primeiro render).
+ const effectiveCategory = category || categories[0]?.name || '';
  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card' | 'debit_card' | 'cash'>('pix');
  const [dayOfMonth, setDayOfMonth] = useState('5');
  const [accountId, setAccountId] = useState(activeAccounts[0]?.id ?? '');
@@ -52,7 +58,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
  description,
  amount: parseFloat(amount),
  type,
- category,
+ category: effectiveCategory,
  paymentMethod,
  dayOfMonth: Math.min(31, Math.max(1, parseInt(dayOfMonth, 10) || 1)),
  active: true,
@@ -131,9 +137,17 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
  </div>
  <div className="min-w-0">
  <p className="text-sm font-medium text-ink truncate">{fe.description}</p>
- <p className="text-xs text-ink-soft">
- {formatCurrency(fe.amount)} · todo dia {fe.dayOfMonth} · {fe.category} ·{' '}
- {accounts.find((a) => a.id === fe.account)?.name ?? '-'}
+ <p className="text-xs text-ink-soft flex items-center gap-1 flex-wrap">
+ {formatCurrency(fe.amount)} · todo dia {fe.dayOfMonth} ·
+ {(() => {
+ const { icon: CatIcon, color } = categoryStyle(categories, fe.category);
+ return (
+ <span className="inline-flex items-center gap-1" style={{ color }}>
+ <CatIcon className="w-3 h-3" /> {fe.category}
+ </span>
+ );
+ })()}
+ · {accounts.find((a) => a.id === fe.account)?.name ?? '-'}
  </p>
  </div>
  </div>
@@ -246,17 +260,15 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
  <label htmlFor="fe-category" className="block text-xs font-medium text-ink-soft mb-1">Categoria</label>
  <select
  id="fe-category"
- value={category}
+ value={effectiveCategory}
  onChange={(e) => setCategory(e.target.value)}
  className="w-full bg-paper border border-rule rounded-md px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-accent"
  >
- <option value="Alimentação">Alimentação</option>
- <option value="Moradia">Moradia</option>
- <option value="Lazer">Lazer</option>
- <option value="Transporte">Transporte</option>
- <option value="Salário">Salário</option>
- <option value="Freela">Freela</option>
- <option value="Outros">Outros</option>
+ {categories.map((cat) => (
+ <option key={cat.id} value={cat.name}>
+ {cat.name}
+ </option>
+ ))}
  </select>
  </div>
  <div>

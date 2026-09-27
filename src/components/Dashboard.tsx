@@ -17,6 +17,9 @@ import {
  HelpCircle,
  Sun,
  Moon,
+ Tags,
+ Paperclip,
+ X,
 } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import { useAuth } from '../hooks/useAuth';
@@ -29,7 +32,7 @@ import type { SavingsGoal } from './SavingsGoals';
 import type { Account } from './Accounts';
 import { addMonthsClamped, daysInMonth, todayLocal } from '../lib/date';
 import { toast } from '../lib/toast';
-import { categoryStyle } from '../lib/categories';
+import { categoryStyle, DEFAULT_CATEGORIES, type Category } from '../lib/categories';
 
 // Modais menos usados que o resumo/histórico do dia a dia: carregam sob
 // demanda (só quando o usuário abre um deles), tirando ~metade do JS do
@@ -38,6 +41,7 @@ const FixedExpenses = lazy(() => import('./FixedExpenses').then((m) => ({ defaul
 const CategoryBudgets = lazy(() => import('./CategoryBudgets').then((m) => ({ default: m.CategoryBudgets })));
 const SavingsGoals = lazy(() => import('./SavingsGoals').then((m) => ({ default: m.SavingsGoals })));
 const Accounts = lazy(() => import('./Accounts').then((m) => ({ default: m.Accounts })));
+const Categories = lazy(() => import('./Categories').then((m) => ({ default: m.Categories })));
 const HelpModal = lazy(() => import('./HelpModal').then((m) => ({ default: m.HelpModal })));
 
 export interface Transaction {
@@ -53,6 +57,7 @@ export interface Transaction {
  installmentIndex?: number;
  installmentTotal?: number;
  recurringSource?: string;
+ receipt?: string;
 }
 
 export interface Transfer {
@@ -92,6 +97,8 @@ export function Dashboard() {
  const [isSavingsGoalsOpen, setIsSavingsGoalsOpen] = useState(false);
  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
  const [isAccountsOpen, setIsAccountsOpen] = useState(false);
+ const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+ const [categories, setCategories] = useState<Category[]>([]);
  const [isHelpOpen, setIsHelpOpen] = useState(false);
  const [accounts, setAccounts] = useState<Account[]>([]);
  const [transfers, setTransfers] = useState<Transfer[]>([]);
@@ -115,6 +122,12 @@ export function Dashboard() {
  const [installmentCount, setInstallmentCount] = useState('2');
  const [editingId, setEditingId] = useState<string | null>(null);
  const [editingTransferId, setEditingTransferId] = useState<string | null>(null);
+ // Recibo/comprovante é opcional: só entra no formulário quando a pessoa
+ // escolhe um arquivo. `existingReceipt` guarda o nome do que já estava
+ // salvo (edição), e `removeReceipt` marca que a pessoa pediu pra tirar.
+ const [receiptFile, setReceiptFile] = useState<File | null>(null);
+ const [existingReceipt, setExistingReceipt] = useState<{ recordId: string; filename: string } | null>(null);
+ const [removeReceipt, setRemoveReceipt] = useState(false);
 
  // Contas ativas: usadas nos seletores de "nova transação/transferência" —
  // uma conta "Inativa" continua existindo pra histórico, mas não deve ser
@@ -209,6 +222,36 @@ export function Dashboard() {
  active = false;
  };
  }, [isAccountsOpen]);
+
+ // Busca as categorias do usuário; na primeira vez (sem nenhuma), cria as
+ // 7 categorias padrão — mesmo padrão das contas acima. Depois disso é
+ // tudo customizável em "Categorias" (nome, ícone, cor).
+ useEffect(() => {
+ let active = true;
+
+ (async () => {
+ try {
+ let records = await pb.collection('categories').getFullList<Category>();
+ if (records.length === 0) {
+ const results = await Promise.allSettled(
+ DEFAULT_CATEGORIES.map((c) =>
+ pb.collection('categories').create<Category>({ ...c, user: pb.authStore.record?.id })
+ )
+ );
+ records = results
+ .filter((r): r is PromiseFulfilledResult<Category> => r.status === 'fulfilled')
+ .map((r) => r.value);
+ }
+ if (active) setCategories(records);
+ } catch (err: any) {
+ console.error('Erro ao buscar categorias:', err.message);
+ }
+ })();
+
+ return () => {
+ active = false;
+ };
+ }, [isCategoriesOpen]);
 
  // Busca inicial + assinatura em tempo real das transferências (sem isso,
  // uma transferência criada em outra aba/sessão nunca aparecia aqui)
@@ -408,6 +451,9 @@ export function Dashboard() {
  paymentMethod,
  date,
  account: accountId,
+ // Anexo é opcional e só muda quando a pessoa mexe nele: sem escolher
+ // nada, o arquivo já salvo continua intacto.
+ ...(removeReceipt ? { receipt: null } : receiptFile ? { receipt: receiptFile } : {}),
  });
  closeModal();
  } catch (err: any) {
@@ -459,6 +505,7 @@ export function Dashboard() {
  date,
  account: accountId,
  user: pb.authStore.record?.id,
+ ...(receiptFile ? { receipt: receiptFile } : {}),
  });
  } else {
  // Divide em centavos e distribui o resto pelas primeiras parcelas
@@ -483,6 +530,9 @@ export function Dashboard() {
  installmentGroup,
  installmentIndex: i + 1,
  installmentTotal: installments,
+ // Mesmo comprovante em todas as parcelas — é a mesma compra, só
+ // dividida; assim dá pra abrir o recibo a partir de qualquer uma.
+ ...(receiptFile ? { receipt: receiptFile } : {}),
  });
  }
  }
@@ -508,6 +558,9 @@ export function Dashboard() {
  setToAccountId('');
  setIsInstallment(false);
  setInstallmentCount('2');
+ setReceiptFile(null);
+ setExistingReceipt(null);
+ setRemoveReceipt(false);
  };
 
  const handleEditClick = (tx: Transaction) => {
@@ -520,6 +573,9 @@ export function Dashboard() {
  setDate(tx.date.slice(0, 10));
  setAccountId(tx.account);
  setIsInstallment(false);
+ setReceiptFile(null);
+ setRemoveReceipt(false);
+ setExistingReceipt(tx.receipt ? { recordId: tx.id, filename: tx.receipt } : null);
  setIsModalOpen(true);
  };
 
@@ -677,7 +733,7 @@ export function Dashboard() {
  const iconBtn = 'p-2.5 -m-1 rounded-sm text-ink-soft transition-colors cursor-pointer';
 
  const renderTxRow = (tx: Transaction) => {
- const { icon: CatIcon, color } = categoryStyle(tx.category);
+ const { icon: CatIcon, color } = categoryStyle(categories, tx.category);
  return (
  <li key={tx.id} className="flex items-start justify-between gap-3 px-4 sm:px-5 py-3 hover:bg-paper-hover transition-colors">
  <div
@@ -701,6 +757,18 @@ export function Dashboard() {
  <span className="text-[11px] text-ink-soft">
  {tx.paymentMethod ? tx.paymentMethod.replace('_', ' ') : '-'}
  </span>
+ {tx.receipt && (
+ <a
+ href={pb.files.getURL(tx, tx.receipt)}
+ target="_blank"
+ rel="noreferrer"
+ title="Ver recibo anexado"
+ aria-label="Ver recibo anexado"
+ className="text-ink-soft hover:text-accent"
+ >
+ <Paperclip className="w-3.5 h-3.5" />
+ </a>
+ )}
  {selectedAccountId === 'all' && (
  <span className="inline-block px-1.5 py-0.5 text-[10px] rounded-sm bg-accent-soft text-accent border border-accent">
  {accountName(tx.account)}
@@ -915,6 +983,7 @@ export function Dashboard() {
  </button>
  {[
  { label: 'Contas', icon: Landmark, onClick: () => setIsAccountsOpen(true) },
+ { label: 'Categorias', icon: Tags, onClick: () => setIsCategoriesOpen(true) },
  { label: 'Fixos', icon: Repeat, onClick: () => setIsFixedExpensesOpen(true) },
  { label: 'Orçamento', icon: Gauge, onClick: () => setIsCategoryBudgetsOpen(true) },
  { label: 'Metas', icon: Target, onClick: () => setIsSavingsGoalsOpen(true) },
@@ -1232,13 +1301,11 @@ export function Dashboard() {
  onChange={(e) => setCategory(e.target.value)}
  className="w-full bg-paper border border-rule rounded-md px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-accent"
  >
- <option value="Alimentação">Alimentação</option>
- <option value="Moradia">Moradia</option>
- <option value="Lazer">Lazer</option>
- <option value="Transporte">Transporte</option>
- <option value="Salário">Salário</option>
- <option value="Freela">Freela</option>
- <option value="Outros">Outros</option>
+ {categories.map((cat) => (
+ <option key={cat.id} value={cat.name}>
+ {cat.name}
+ </option>
+ ))}
  </select>
  </div>
  <div>
@@ -1273,6 +1340,55 @@ export function Dashboard() {
  ))}
  </select>
  </div>
+
+ <div>
+ <label htmlFor="tx-receipt" className="block text-xs font-medium text-ink-soft mb-1">
+ Recibo/comprovante <span className="text-ink-soft">(opcional)</span>
+ </label>
+ {existingReceipt && !removeReceipt && !receiptFile ? (
+ <div className="flex items-center justify-between gap-2 bg-paper border border-rule rounded-md px-3 py-2">
+ <a
+ href={pb.files.getURL({ id: existingReceipt.recordId, collectionName: 'transactions' }, existingReceipt.filename)}
+ target="_blank"
+ rel="noreferrer"
+ className="flex items-center gap-2 text-sm text-accent hover:underline min-w-0 truncate"
+ >
+ <Paperclip className="w-4 h-4 shrink-0" /> Ver anexo atual
+ </a>
+ <button
+ type="button"
+ onClick={() => setRemoveReceipt(true)}
+ aria-label="Remover anexo"
+ className="p-1 rounded-sm text-ink-soft hover:text-expense hover:bg-expense-soft cursor-pointer shrink-0"
+ >
+ <X className="w-4 h-4" />
+ </button>
+ </div>
+ ) : (
+ <div className="flex items-center gap-2">
+ <input
+ id="tx-receipt"
+ type="file"
+ accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+ onChange={(e) => {
+ setReceiptFile(e.target.files?.[0] ?? null);
+ setRemoveReceipt(false);
+ }}
+ className="w-full text-sm text-ink-soft file:mr-3 file:py-1.5 file:px-3 file:rounded-sm file:border file:border-rule file:bg-paper-hover file:text-ink file:text-xs file:cursor-pointer cursor-pointer"
+ />
+ {receiptFile && (
+ <button
+ type="button"
+ onClick={() => setReceiptFile(null)}
+ aria-label="Cancelar anexo"
+ className="p-1.5 rounded-sm text-ink-soft hover:text-expense hover:bg-expense-soft cursor-pointer shrink-0"
+ >
+ <X className="w-4 h-4" />
+ </button>
+ )}
+ </div>
+ )}
+ </div>
  </>
  )}
 
@@ -1306,6 +1422,7 @@ export function Dashboard() {
  fixedExpenses={fixedExpenses}
  onChange={setFixedExpenses}
  accounts={accounts}
+ categories={categories}
  onClose={() => setIsFixedExpensesOpen(false)}
  />
  )}
@@ -1320,11 +1437,20 @@ export function Dashboard() {
  />
  )}
 
+ {isCategoriesOpen && (
+ <Categories
+ categories={categories}
+ onChange={setCategories}
+ onClose={() => setIsCategoriesOpen(false)}
+ />
+ )}
+
  {isCategoryBudgetsOpen && (
  <CategoryBudgets
  budgets={categoryBudgets}
  onChange={setCategoryBudgets}
  monthTransactions={monthTransactions}
+ categories={categories}
  onClose={() => setIsCategoryBudgetsOpen(false)}
  />
  )}

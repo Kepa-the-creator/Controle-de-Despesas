@@ -37,6 +37,14 @@ const FAQ = [
  q: 'Qual a diferença entre Orçamento por Categoria e Meta de Economia?',
  a: 'Orçamento por categoria é um TETO de gasto (ex: no máximo R$800 em Alimentação por mês) — a barra fica vermelha se você passar. Meta de economia é um ALVO de quanto guardar (ex: juntar R$10.000 pra uma viagem), com aportes que você registra manualmente.',
  },
+ {
+ q: 'Como personalizo as categorias?',
+ a: 'Em "Categorias", você cria, renomeia ou apaga categorias, e escolhe um ícone e uma cor pra cada uma. Se apagar uma categoria que já foi usada em algum lançamento, o lançamento antigo continua com o nome salvo — só some da lista de opções pra lançamentos novos.',
+ },
+ {
+ q: 'Preciso anexar recibo em toda transação?',
+ a: 'Não, é opcional. No formulário de nova transação (ou ao editar uma existente) tem um campo "Recibo/comprovante" — só anexa se quiser guardar a foto ou o PDF junto do lançamento. Uma compra parcelada usa o mesmo anexo em todas as parcelas geradas.',
+ },
 ];
 
 export function HelpModal({ onClose }: HelpModalProps) {

@@ -3,6 +3,7 @@ import { Plus, Trash2, Gauge, X } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import type { Transaction } from './Dashboard';
 import { toast } from '../lib/toast';
+import { categoryStyle, type Category } from '../lib/categories';
 
 export interface CategoryBudget {
  id: string;
@@ -14,16 +15,18 @@ interface CategoryBudgetsProps {
  budgets: CategoryBudget[];
  onChange: (list: CategoryBudget[]) => void;
  monthTransactions: Transaction[];
+ categories: Category[];
  onClose: () => void;
 }
-
-const CATEGORIES = ['Alimentação', 'Moradia', 'Lazer', 'Transporte', 'Salário', 'Freela', 'Outros'];
 
 const formatCurrency = (val: number) =>
  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
-export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose }: CategoryBudgetsProps) {
- const [category, setCategory] = useState(CATEGORIES[0]);
+export function CategoryBudgets({ budgets, onChange, monthTransactions, categories, onClose }: CategoryBudgetsProps) {
+ const [category, setCategory] = useState('');
+ // Cai pra primeira categoria carregada até a pessoa escolher outra —
+ // sem efeito, só o valor mostrado/enviado enquanto `category` está vazio.
+ const effectiveCategory = category || categories[0]?.name || '';
  const [limit, setLimit] = useState('');
 
  const spentByCategory = (cat: string) =>
@@ -35,14 +38,14 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose 
  e.preventDefault();
  if (!limit || parseFloat(limit) <= 0) return;
 
- const existing = budgets.find((b) => b.category === category);
+ const existing = budgets.find((b) => b.category === effectiveCategory);
  try {
  if (existing) {
  await pb.collection('category_budgets').update(existing.id, { limit: parseFloat(limit) });
  onChange(budgets.map((b) => (b.id === existing.id ? { ...b, limit: parseFloat(limit) } : b)));
  } else {
  const record = await pb.collection('category_budgets').create<CategoryBudget>({
- category,
+ category: effectiveCategory,
  limit: parseFloat(limit),
  user: pb.authStore.record?.id,
  });
@@ -90,7 +93,14 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose 
  return (
  <div key={b.id} className="bg-paper border border-rule rounded-md px-4 py-3">
  <div className="flex items-center justify-between mb-1.5">
- <span className="text-sm font-medium text-ink">{b.category}</span>
+ {(() => {
+ const { icon: CatIcon, color } = categoryStyle(categories, b.category);
+ return (
+ <span className="text-sm font-medium text-ink flex items-center gap-1.5" style={{ color }}>
+ <CatIcon className="w-4 h-4" /> {b.category}
+ </span>
+ );
+ })()}
  <div className="flex items-center gap-2">
  <span className="text-xs tabular text-ink-soft">
  {formatCurrency(spent)} / {formatCurrency(b.limit)}
@@ -120,13 +130,13 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, onClose 
  <label htmlFor="cb-category" className="block text-xs font-medium text-ink-soft mb-1">Categoria</label>
  <select
  id="cb-category"
- value={category}
+ value={effectiveCategory}
  onChange={(e) => setCategory(e.target.value)}
  className="w-full bg-paper border border-rule rounded-md px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-accent"
  >
- {CATEGORIES.map((c) => (
- <option key={c} value={c}>
- {c}
+ {categories.map((c) => (
+ <option key={c.id} value={c.name}>
+ {c.name}
  </option>
  ))}
  </select>

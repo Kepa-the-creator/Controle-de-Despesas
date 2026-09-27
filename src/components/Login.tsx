@@ -34,8 +34,9 @@ export function Login() {
 
  <form onSubmit={handleSubmit} className="space-y-4">
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">E-mail</label>
+ <label htmlFor="login-email" className="block text-xs font-medium text-ink-soft mb-1">E-mail</label>
  <input
+ id="login-email"
  type="email"
  required
  autoFocus
@@ -46,8 +47,9 @@ export function Login() {
  />
  </div>
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Senha</label>
+ <label htmlFor="login-password" className="block text-xs font-medium text-ink-soft mb-1">Senha</label>
  <input
+ id="login-password"
  type="password"
  required
  value={password}

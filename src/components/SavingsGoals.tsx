@@ -117,6 +117,7 @@ export function SavingsGoals({ goals, onChange, cursor, onClose }: SavingsGoalsP
  </h3>
  <button
  onClick={onClose}
+ aria-label="Fechar"
  className="p-1.5 rounded-sm text-ink-soft hover:text-ink hover:bg-paper-hover transition-colors cursor-pointer"
  >
  <X className="w-5 h-5" />
@@ -200,8 +201,9 @@ export function SavingsGoals({ goals, onChange, cursor, onClose }: SavingsGoalsP
 
  <form onSubmit={handleCreateGoal} className="space-y-3 border-t border-rule pt-4">
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Nome da meta</label>
+ <label htmlFor="sg-name" className="block text-xs font-medium text-ink-soft mb-1">Nome da meta</label>
  <input
+ id="sg-name"
  type="text"
  required
  placeholder="Ex: Viagem, Reserva de emergência..."
@@ -213,8 +215,9 @@ export function SavingsGoals({ goals, onChange, cursor, onClose }: SavingsGoalsP
 
  <div className="grid grid-cols-3 gap-3">
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Valor alvo (R$)</label>
+ <label htmlFor="sg-target" className="block text-xs font-medium text-ink-soft mb-1">Valor alvo (R$)</label>
  <input
+ id="sg-target"
  type="number"
  step="0.01"
  required
@@ -225,8 +228,9 @@ export function SavingsGoals({ goals, onChange, cursor, onClose }: SavingsGoalsP
  />
  </div>
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Tipo</label>
+ <label htmlFor="sg-period" className="block text-xs font-medium text-ink-soft mb-1">Tipo</label>
  <select
+ id="sg-period"
  value={period}
  onChange={(e) => setPeriod(e.target.value as 'monthly' | 'total')}
  className="w-full bg-paper border border-rule rounded-md px-2 py-2.5 text-sm text-ink focus:outline-none focus:border-accent"
@@ -236,8 +240,9 @@ export function SavingsGoals({ goals, onChange, cursor, onClose }: SavingsGoalsP
  </select>
  </div>
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Data alvo</label>
+ <label htmlFor="sg-date" className="block text-xs font-medium text-ink-soft mb-1">Data alvo</label>
  <input
+ id="sg-date"
  type="date"
  value={targetDate}
  onChange={(e) => setTargetDate(e.target.value)}

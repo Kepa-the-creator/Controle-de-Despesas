@@ -49,6 +49,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
  </h3>
  <button
  onClick={onClose}
+ aria-label="Fechar"
  className="p-1.5 rounded-sm text-ink-soft hover:text-ink hover:bg-paper-hover transition-colors cursor-pointer"
  >
  <X className="w-5 h-5" />

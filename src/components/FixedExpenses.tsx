@@ -109,6 +109,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
  </h3>
  <button
  onClick={onClose}
+ aria-label="Fechar"
  className="p-1.5 rounded-sm text-ink-soft hover:text-ink hover:bg-paper-hover transition-colors cursor-pointer"
  >
  <X className="w-5 h-5" />
@@ -185,8 +186,9 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
  </div>
 
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Descrição</label>
+ <label htmlFor="fe-description" className="block text-xs font-medium text-ink-soft mb-1">Descrição</label>
  <input
+ id="fe-description"
  type="text"
  required
  placeholder="Ex: Aluguel, Netflix..."
@@ -198,8 +200,9 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
 
  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Valor (R$)</label>
+ <label htmlFor="fe-amount" className="block text-xs font-medium text-ink-soft mb-1">Valor (R$)</label>
  <input
+ id="fe-amount"
  type="number"
  step="0.01"
  required
@@ -210,8 +213,9 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
  />
  </div>
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Dia do mês</label>
+ <label htmlFor="fe-day" className="block text-xs font-medium text-ink-soft mb-1">Dia do mês</label>
  <input
+ id="fe-day"
  type="number"
  min={1}
  max={31}
@@ -222,8 +226,9 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
  />
  </div>
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Pagamento</label>
+ <label htmlFor="fe-payment" className="block text-xs font-medium text-ink-soft mb-1">Pagamento</label>
  <select
+ id="fe-payment"
  value={paymentMethod}
  onChange={(e) => setPaymentMethod(e.target.value as any)}
  className="w-full bg-paper border border-rule rounded-md px-2 py-2.5 text-sm text-ink focus:outline-none focus:border-accent"
@@ -238,8 +243,9 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
 
  <div className="grid grid-cols-2 gap-3">
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Categoria</label>
+ <label htmlFor="fe-category" className="block text-xs font-medium text-ink-soft mb-1">Categoria</label>
  <select
+ id="fe-category"
  value={category}
  onChange={(e) => setCategory(e.target.value)}
  className="w-full bg-paper border border-rule rounded-md px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-accent"
@@ -254,8 +260,9 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, onClose }: Fi
  </select>
  </div>
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Conta</label>
+ <label htmlFor="fe-account" className="block text-xs font-medium text-ink-soft mb-1">Conta</label>
  <select
+ id="fe-account"
  value={accountId}
  required
  onChange={(e) => setAccountId(e.target.value)}

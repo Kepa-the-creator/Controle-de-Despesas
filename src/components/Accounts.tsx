@@ -135,6 +135,7 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
  </h3>
  <button
  onClick={onClose}
+ aria-label="Fechar"
  className="p-1.5 rounded-sm text-ink-soft hover:text-ink hover:bg-paper-hover transition-colors cursor-pointer"
  >
  <X className="w-5 h-5" />
@@ -230,8 +231,9 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
  <form onSubmit={handleAdd} className="space-y-3 border-t border-rule pt-4">
  <div className="grid grid-cols-2 gap-3">
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Nome da conta</label>
+ <label htmlFor="acc-name" className="block text-xs font-medium text-ink-soft mb-1">Nome da conta</label>
  <input
+ id="acc-name"
  type="text"
  required
  placeholder="Ex: Conta Corrente, Carteira..."
@@ -241,8 +243,9 @@ export function Accounts({ accounts, onChange, transactions, transfers, onClose 
  />
  </div>
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Saldo inicial (R$)</label>
+ <label htmlFor="acc-initial-balance" className="block text-xs font-medium text-ink-soft mb-1">Saldo inicial (R$)</label>
  <input
+ id="acc-initial-balance"
  type="number"
  step="0.01"
  value={initialBalance}

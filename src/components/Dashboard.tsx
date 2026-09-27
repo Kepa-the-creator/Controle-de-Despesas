@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import {
  ArrowUpCircle,
  ArrowDownCircle,
@@ -22,15 +22,23 @@ import { pb } from '../services/pocketbase';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { CategoryChart } from './CategoryChart';
-import { FixedExpenses, type FixedExpense } from './FixedExpenses';
 import { MonthlyTrend } from './MonthlyTrend';
-import { CategoryBudgets, type CategoryBudget } from './CategoryBudgets';
-import { SavingsGoals, type SavingsGoal } from './SavingsGoals';
-import { Accounts, type Account } from './Accounts';
-import { HelpModal } from './HelpModal';
+import type { FixedExpense } from './FixedExpenses';
+import type { CategoryBudget } from './CategoryBudgets';
+import type { SavingsGoal } from './SavingsGoals';
+import type { Account } from './Accounts';
 import { addMonthsClamped, daysInMonth, todayLocal } from '../lib/date';
 import { toast } from '../lib/toast';
 import { categoryStyle } from '../lib/categories';
+
+// Modais menos usados que o resumo/histórico do dia a dia: carregam sob
+// demanda (só quando o usuário abre um deles), tirando ~metade do JS do
+// carregamento inicial do app.
+const FixedExpenses = lazy(() => import('./FixedExpenses').then((m) => ({ default: m.FixedExpenses })));
+const CategoryBudgets = lazy(() => import('./CategoryBudgets').then((m) => ({ default: m.CategoryBudgets })));
+const SavingsGoals = lazy(() => import('./SavingsGoals').then((m) => ({ default: m.SavingsGoals })));
+const Accounts = lazy(() => import('./Accounts').then((m) => ({ default: m.Accounts })));
+const HelpModal = lazy(() => import('./HelpModal').then((m) => ({ default: m.HelpModal })));
 
 export interface Transaction {
  id: string;
@@ -58,6 +66,17 @@ export interface Transfer {
 
 const sortByDateDesc = (list: Transaction[]) =>
  [...list].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+
+// Fallback dos modais que carregam sob demanda (React.lazy): quase nunca
+// aparece de fato, já que o chunk baixa em milissegundos, mas evita a tela
+// congelada sem retorno visual no primeiro clique.
+function ModalLoadingFallback() {
+  return (
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" role="status" aria-label="Carregando">
+      <div className="w-8 h-8 border-2 border-rule-strong border-t-accent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 export function Dashboard() {
  const { logout } = useAuth();
@@ -655,7 +674,7 @@ export function Dashboard() {
  return `${w.charAt(0).toUpperCase()}${w.slice(1)}, ${String(day).padStart(2, '0')}`;
  };
 
- const iconBtn = 'p-1.5 rounded-sm text-ink-soft transition-colors cursor-pointer';
+ const iconBtn = 'p-2.5 -m-1 rounded-sm text-ink-soft transition-colors cursor-pointer';
 
  const renderTxRow = (tx: Transaction) => {
  const { icon: CatIcon, color } = categoryStyle(tx.category);
@@ -694,11 +713,11 @@ export function Dashboard() {
  {tx.type === 'income' ? '+ ' : '- '}
  {formatCurrency(tx.amount)}
  </span>
- <div className="flex items-center gap-0.5">
- <button onClick={() => handleEditClick(tx)} className={`${iconBtn} hover:text-accent hover:bg-accent-soft`} title="Editar">
+ <div className="flex items-center gap-1">
+ <button onClick={() => handleEditClick(tx)} className={`${iconBtn} hover:text-accent hover:bg-accent-soft`} aria-label="Editar" title="Editar">
  <Pencil className="w-4 h-4" />
  </button>
- <button onClick={() => handleDelete(tx.id)} className={`${iconBtn} hover:text-expense hover:bg-expense-soft`} title="Excluir">
+ <button onClick={() => handleDelete(tx.id)} className={`${iconBtn} hover:text-expense hover:bg-expense-soft`} aria-label="Excluir" title="Excluir">
  <Trash2 className="w-4 h-4" />
  </button>
  </div>
@@ -722,9 +741,7 @@ export function Dashboard() {
  const isIncome = kind === 'income';
  return (
  <section
- className={`${mobileTab === kind ? '' : 'hidden'} md:block rounded-md overflow-hidden border-2 border-rule border-t-4 ${
- isIncome ? 'border-t-income' : 'border-t-expense'
- } bg-paper-raised shadow-sm`}
+ className={`${mobileTab === kind ? '' : 'hidden'} md:block rounded-md overflow-hidden border-2 border-rule bg-paper-raised`}
  >
  <div className="p-4 sm:p-5 flex items-center justify-between gap-3 border-b border-rule">
  <div className="flex items-center gap-3 min-w-0">
@@ -827,6 +844,7 @@ export function Dashboard() {
  <button
  onClick={toggleTheme}
  className="p-2.5 rounded-md text-ink-soft hover:text-ink hover:bg-paper-hover border border-rule transition-colors cursor-pointer"
+ aria-label={theme === 'light' ? 'Tema escuro' : 'Tema claro'}
  title={theme === 'light' ? 'Tema escuro' : 'Tema claro'}
  >
  {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
@@ -834,6 +852,7 @@ export function Dashboard() {
  <button
  onClick={() => setIsHelpOpen(true)}
  className="p-2.5 rounded-md text-ink-soft hover:text-ink hover:bg-paper-hover border border-rule transition-colors cursor-pointer"
+ aria-label="Ajuda"
  title="Ajuda"
  >
  <HelpCircle className="w-5 h-5" />
@@ -841,6 +860,7 @@ export function Dashboard() {
  <button
  onClick={logout}
  className="p-2.5 rounded-md text-ink-soft hover:text-ink hover:bg-paper-hover border border-rule transition-colors cursor-pointer"
+ aria-label="Sair"
  title="Sair"
  >
  <LogOut className="w-5 h-5" />
@@ -866,6 +886,7 @@ export function Dashboard() {
  <button
  onClick={goPrevMonth}
  className="p-2 rounded-sm text-ink-soft hover:text-ink hover:bg-paper-hover transition-colors cursor-pointer"
+ aria-label="Mês anterior"
  title="Mês anterior"
  >
  <ChevronLeft className="w-4 h-4" />
@@ -876,6 +897,7 @@ export function Dashboard() {
  <button
  onClick={goNextMonth}
  className="p-2 rounded-sm text-ink-soft hover:text-ink hover:bg-paper-hover transition-colors cursor-pointer"
+ aria-label="Próximo mês"
  title="Próximo mês"
  >
  <ChevronRight className="w-4 h-4" />
@@ -948,7 +970,7 @@ export function Dashboard() {
  </p>
  </div>
 
- <div className={`p-4 sm:p-5 ${summary.balance >= 0 ? 'bg-accent-soft' : 'bg-expense-soft'}`}>
+ <div className="bg-paper-raised p-4 sm:p-5">
  <div className="flex items-center justify-between">
  <span className="text-xs sm:text-sm text-ink-soft">Saldo livre</span>
  <Wallet className={`w-4 h-4 ${summary.balance >= 0 ? 'text-accent' : 'text-expense'}`} />
@@ -999,7 +1021,7 @@ export function Dashboard() {
  </div>
 
  {monthTransfers.length > 0 && (
- <section className="rounded-md overflow-hidden border-2 border-rule border-t-4 border-t-accent bg-paper-raised shadow-sm">
+ <section className="rounded-md overflow-hidden border-2 border-rule bg-paper-raised">
  <div className="p-4 sm:p-5 flex items-center gap-3 border-b border-rule">
  <div className="p-2 rounded-sm bg-accent-soft text-accent">
  <ArrowRightLeft className="w-5 h-5" />
@@ -1023,11 +1045,11 @@ export function Dashboard() {
  </div>
  <div className="flex flex-col items-end gap-1 shrink-0">
  <span className="text-sm font-semibold tabular text-accent">{formatCurrency(tr.amount)}</span>
- <div className="flex items-center gap-0.5">
- <button onClick={() => handleEditTransferClick(tr)} className={`${iconBtn} hover:text-accent hover:bg-accent-soft`} title="Editar">
+ <div className="flex items-center gap-1">
+ <button onClick={() => handleEditTransferClick(tr)} className={`${iconBtn} hover:text-accent hover:bg-accent-soft`} aria-label="Editar" title="Editar">
  <Pencil className="w-4 h-4" />
  </button>
- <button onClick={() => handleDeleteTransfer(tr.id)} className={`${iconBtn} hover:text-expense hover:bg-expense-soft`} title="Excluir">
+ <button onClick={() => handleDeleteTransfer(tr.id)} className={`${iconBtn} hover:text-expense hover:bg-expense-soft`} aria-label="Excluir" title="Excluir">
  <Trash2 className="w-4 h-4" />
  </button>
  </div>
@@ -1096,10 +1118,11 @@ export function Dashboard() {
  )}
 
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">
+ <label htmlFor="tx-description" className="block text-xs font-medium text-ink-soft mb-1">
  Descrição {formMode === 'transfer' && <span className="text-ink-soft">(opcional)</span>}
  </label>
  <input
+ id="tx-description"
  type="text"
  required={formMode !== 'transfer'}
  placeholder="Ex: Aluguel, Salário, Supermercado..."
@@ -1111,8 +1134,9 @@ export function Dashboard() {
 
  <div className="grid grid-cols-2 gap-3">
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Valor (R$)</label>
+ <label htmlFor="tx-amount" className="block text-xs font-medium text-ink-soft mb-1">Valor (R$)</label>
  <input
+ id="tx-amount"
  type="number"
  step="0.01"
  required
@@ -1123,8 +1147,9 @@ export function Dashboard() {
  />
  </div>
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Data</label>
+ <label htmlFor="tx-date" className="block text-xs font-medium text-ink-soft mb-1">Data</label>
  <input
+ id="tx-date"
  type="date"
  required
  value={date}
@@ -1164,8 +1189,9 @@ export function Dashboard() {
  {formMode === 'transfer' ? (
  <div className="grid grid-cols-2 gap-3">
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Conta de origem</label>
+ <label htmlFor="tx-from-account" className="block text-xs font-medium text-ink-soft mb-1">Conta de origem</label>
  <select
+ id="tx-from-account"
  value={fromAccountId}
  required
  onChange={(e) => setFromAccountId(e.target.value)}
@@ -1179,8 +1205,9 @@ export function Dashboard() {
  </select>
  </div>
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Conta de destino</label>
+ <label htmlFor="tx-to-account" className="block text-xs font-medium text-ink-soft mb-1">Conta de destino</label>
  <select
+ id="tx-to-account"
  value={toAccountId}
  required
  onChange={(e) => setToAccountId(e.target.value)}
@@ -1198,8 +1225,9 @@ export function Dashboard() {
  <>
  <div className="grid grid-cols-2 gap-3">
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Categoria</label>
+ <label htmlFor="tx-category" className="block text-xs font-medium text-ink-soft mb-1">Categoria</label>
  <select
+ id="tx-category"
  value={category}
  onChange={(e) => setCategory(e.target.value)}
  className="w-full bg-paper border border-rule rounded-md px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-accent"
@@ -1214,8 +1242,9 @@ export function Dashboard() {
  </select>
  </div>
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Pagamento</label>
+ <label htmlFor="tx-payment" className="block text-xs font-medium text-ink-soft mb-1">Pagamento</label>
  <select
+ id="tx-payment"
  value={paymentMethod}
  onChange={(e) => setPaymentMethod(e.target.value as any)}
  className="w-full bg-paper border border-rule rounded-md px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-accent"
@@ -1229,8 +1258,9 @@ export function Dashboard() {
  </div>
 
  <div>
- <label className="block text-xs font-medium text-ink-soft mb-1">Conta</label>
+ <label htmlFor="tx-account" className="block text-xs font-medium text-ink-soft mb-1">Conta</label>
  <select
+ id="tx-account"
  value={accountId}
  required
  onChange={(e) => setAccountId(e.target.value)}
@@ -1270,6 +1300,7 @@ export function Dashboard() {
  </div>
  )}
 
+ <Suspense fallback={<ModalLoadingFallback />}>
  {isFixedExpensesOpen && (
  <FixedExpenses
  fixedExpenses={fixedExpenses}
@@ -1308,6 +1339,7 @@ export function Dashboard() {
  )}
 
  {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} />}
+ </Suspense>
  </div>
  );
 }

@@ -98,6 +98,16 @@ export const COLOR_OPTIONS = [
   { key: 'grafite', value: '#565d4e', label: 'Grafite' },
   { key: 'dourado', value: '#8a7526', label: 'Dourado escuro' },
   { key: 'petroleo', value: '#2c6066', label: 'Azul-petróleo' },
+  { key: 'vinho', value: '#7a2e3a', label: 'Vinho' },
+  { key: 'musgo', value: '#5a6b35', label: 'Verde-musgo' },
+  { key: 'indigo', value: '#47478a', label: 'Índigo' },
+  { key: 'cafe', value: '#6b4a35', label: 'Café' },
+  { key: 'coral', value: '#b5544a', label: 'Coral queimado' },
+  { key: 'ardosia', value: '#4f5b6b', label: 'Ardósia' },
+  { key: 'ocre', value: '#a68a2e', label: 'Ocre' },
+  { key: 'esmeralda', value: '#1f6b52', label: 'Esmeralda' },
+  { key: 'cobalto', value: '#35578a', label: 'Cobalto' },
+  { key: 'salmao', value: '#9c6b5a', label: 'Salmão queimado' },
 ];
 
 // Categorias que o app cria sozinho na primeira vez que alguém abre (mesmo

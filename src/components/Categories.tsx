@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Plus, Trash2, Tags, X, Pencil, Check } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import { toast } from '../lib/toast';
-import { ICON_OPTIONS, COLOR_OPTIONS, type Category } from '../lib/categories';
+import { ICON_OPTIONS, COLOR_OPTIONS, lightenForDark, type Category } from '../lib/categories';
 import type { Theme } from '../hooks/useTheme';
 
 interface CategoriesProps {
@@ -17,7 +17,8 @@ interface CategoriesProps {
 // tom — mesma lógica de categoryStyle, só que a partir do hex direto.
 const resolveSwatch = (hex: string, theme: Theme) => {
   if (theme !== 'dark') return hex;
-  return COLOR_OPTIONS.find((o) => o.value === hex)?.dark ?? hex;
+  const match = COLOR_OPTIONS.find((o) => o.value === hex)?.dark;
+  return match ?? lightenForDark(hex);
 };
 
 // Grade de ícones/cores reaproveitada no criar e no editar — evita repetir

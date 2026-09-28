@@ -136,10 +136,34 @@ export const DEFAULT_CATEGORIES: { name: string; icon: string; color: string }[]
 
 const FALLBACK = { value: '#6b7260', dark: '#9ca28d' };
 
+const hexToRgb = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+};
+
+const rgbToHex = (r: number, g: number, b: number) =>
+  '#' +
+  [r, g, b]
+    .map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, '0'))
+    .join('');
+
+// Clareia qualquer hex (mistura com branco) pro tema escuro — usado quando a
+// cor salva na categoria não é uma das opções atuais da paleta (cor de uma
+// paleta anterior, ou digitada à mão em algum momento). Mantém a cor que a
+// pessoa escolheu em vez de cair num cinza genérico.
+export const lightenForDark = (hex: string, amount = 0.45): string => {
+  const { r, g, b } = hexToRgb(hex);
+  return rgbToHex(r + (255 - r) * amount, g + (255 - g) * amount, b + (255 - b) * amount);
+};
+
 /** Ícone/cor de uma categoria pelo nome salvo na transação, já resolvidos
  * pro tema atual — cai num selo neutro quando o nome não bate com nenhuma
  * categoria cadastrada (categoria renomeada ou apagada depois que a
- * transação já existia). */
+ * transação já existia). Quando a categoria existe mas sua cor salva não é
+ * uma das opções atuais (paleta trocada depois que ela foi criada), usa o
+ * hex salvo direto no tema claro e uma variante clareada no escuro, em vez
+ * de cair no fallback — a cor escolhida pela pessoa não se perde numa
+ * repaginação de paleta. */
 export const categoryStyle = (
   categories: Category[],
   name: string,
@@ -150,7 +174,17 @@ export const categoryStyle = (
   // transações antigas tenha vindo digitado diferente.
   const key = name.trim().toLowerCase();
   const found = categories.find((c) => c.name.trim().toLowerCase() === key);
-  const pair = (found && COLOR_MAP[found.color]) || FALLBACK;
   const icon = (found && ICON_MAP[found.icon]) || Tag;
-  return { icon, color: theme === 'dark' ? pair.dark : pair.value };
+  if (!found) {
+    return { icon, color: theme === 'dark' ? FALLBACK.dark : FALLBACK.value };
+  }
+  const pair = COLOR_MAP[found.color];
+  const color = pair
+    ? theme === 'dark'
+      ? pair.dark
+      : pair.value
+    : theme === 'dark'
+      ? lightenForDark(found.color)
+      : found.color;
+  return { icon, color };
 };

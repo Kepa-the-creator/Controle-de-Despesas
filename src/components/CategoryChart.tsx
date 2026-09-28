@@ -2,16 +2,15 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 import type { Transaction } from './Dashboard';
 import type { Theme } from '../hooks/useTheme';
 import { chartTheme } from '../lib/chartTheme';
-
-// Mesma família de tons de tinta usada nos selos de categoria (src/lib/categories.ts)
-const COLORS = ['#b08628', '#2b4c7e', '#8b5a83', '#3e8a88', '#2f6f4e', '#a8623c', '#9a3b34', '#6b7260'];
+import { categoryStyle, type Category } from '../lib/categories';
 
 interface CategoryChartProps {
   transactions: Transaction[];
+  categories: Category[];
   theme: Theme;
 }
 
-export function CategoryChart({ transactions, theme }: CategoryChartProps) {
+export function CategoryChart({ transactions, categories, theme }: CategoryChartProps) {
   const c = chartTheme(theme);
   const data = Object.values(
     transactions
@@ -37,8 +36,8 @@ export function CategoryChart({ transactions, theme }: CategoryChartProps) {
         <ResponsiveContainer width="100%" height={280}>
           <PieChart>
             <Pie data={data} dataKey="value" nameKey="name" innerRadius={60} outerRadius={95} paddingAngle={2}>
-              {data.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="none" />
+              {data.map((entry, i) => (
+                <Cell key={i} fill={categoryStyle(categories, entry.name).color} stroke="none" />
               ))}
             </Pie>
             <Tooltip

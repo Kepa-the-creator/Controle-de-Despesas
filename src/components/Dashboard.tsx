@@ -1061,7 +1061,7 @@ export function Dashboard() {
  theme={theme}
  />
  </div>
- <CategoryChart transactions={monthTransactions} theme={theme} />
+ <CategoryChart transactions={monthTransactions} categories={categories} theme={theme} />
  </div>
 
  {/* Entradas e saídas */}

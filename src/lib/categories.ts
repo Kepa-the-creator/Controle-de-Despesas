@@ -129,7 +129,11 @@ const FALLBACK = { icon: Tag, color: '#6b7260' };
  * neutro quando o nome não bate com nenhuma categoria cadastrada (categoria
  * renomeada ou apagada depois que a transação já existia). */
 export const categoryStyle = (categories: Category[], name: string): { icon: LucideIcon; color: string } => {
-  const found = categories.find((c) => c.name === name);
+  // Sem diferenciar maiúsculas/acentuação de caixa: "ENERGIA" e "Energia"
+  // são a mesma categoria pra quem olha a tela, mesmo que o texto salvo em
+  // transações antigas tenha vindo digitado diferente.
+  const key = name.trim().toLowerCase();
+  const found = categories.find((c) => c.name.trim().toLowerCase() === key);
   if (!found) return FALLBACK;
   return { icon: ICON_MAP[found.icon] ?? Tag, color: found.color };
 };

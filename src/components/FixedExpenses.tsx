@@ -3,6 +3,7 @@ import { Plus, Trash2, Repeat, X, ArrowUpCircle, ArrowDownCircle } from 'lucide-
 import { pb } from '../services/pocketbase';
 import { toast } from '../lib/toast';
 import { categoryStyle, type Category } from '../lib/categories';
+import type { Theme } from '../hooks/useTheme';
 
 export interface FixedExpense {
  id: string;
@@ -28,10 +29,11 @@ interface FixedExpensesProps {
  onChange: (list: FixedExpense[]) => void;
  accounts: AccountOption[];
  categories: Category[];
+ theme: Theme;
  onClose: () => void;
 }
 
-export function FixedExpenses({ fixedExpenses, onChange, accounts, categories, onClose }: FixedExpensesProps) {
+export function FixedExpenses({ fixedExpenses, onChange, accounts, categories, theme, onClose }: FixedExpensesProps) {
  const activeAccounts = accounts.filter((a) => a.active !== false);
  const [description, setDescription] = useState('');
  const [amount, setAmount] = useState('');
@@ -140,7 +142,7 @@ export function FixedExpenses({ fixedExpenses, onChange, accounts, categories, o
  <p className="text-xs text-ink-soft flex items-center gap-1 flex-wrap">
  {formatCurrency(fe.amount)} · todo dia {fe.dayOfMonth} ·
  {(() => {
- const { icon: CatIcon, color } = categoryStyle(categories, fe.category);
+ const { icon: CatIcon, color } = categoryStyle(categories, fe.category, theme);
  return (
  <span className="inline-flex items-center gap-1" style={{ color }}>
  <CatIcon className="w-3 h-3" /> {fe.category}

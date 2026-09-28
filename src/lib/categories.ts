@@ -33,6 +33,7 @@ import {
   TrendingUp,
   type LucideIcon,
 } from 'lucide-react';
+import type { Theme } from '../hooks/useTheme';
 
 export interface Category {
   id: string;
@@ -83,57 +84,73 @@ const ICON_MAP: Record<string, LucideIcon> = Object.fromEntries(
   ICON_OPTIONS.map((o) => [o.key, o.icon])
 );
 
-// Paleta curada de tinta — as mesmas famílias de cor do DESIGN.md, pra um
-// selo novo nunca destoar do resto do sistema "papel + tinta".
-export const COLOR_OPTIONS = [
-  { key: 'mostarda', value: '#b08628', label: 'Mostarda' },
-  { key: 'azul', value: '#2b4c7e', label: 'Azul-tinta' },
-  { key: 'ameixa', value: '#8b5a83', label: 'Ameixa' },
-  { key: 'teal', value: '#3e8a88', label: 'Verde-azulado' },
-  { key: 'verde', value: '#2f6f4e', label: 'Verde-cédula' },
-  { key: 'terracota', value: '#a8623c', label: 'Terracota' },
-  { key: 'vermelho', value: '#9a3b34', label: 'Vermelho-tijolo' },
-  { key: 'roxo', value: '#6a5a9c', label: 'Roxo' },
-  { key: 'rosa', value: '#a8557a', label: 'Rosa-antigo' },
-  { key: 'grafite', value: '#565d4e', label: 'Grafite' },
-  { key: 'dourado', value: '#8a7526', label: 'Dourado escuro' },
-  { key: 'petroleo', value: '#2c6066', label: 'Azul-petróleo' },
-  { key: 'vinho', value: '#7a2e3a', label: 'Vinho' },
-  { key: 'musgo', value: '#5a6b35', label: 'Verde-musgo' },
-  { key: 'indigo', value: '#47478a', label: 'Índigo' },
-  { key: 'cafe', value: '#6b4a35', label: 'Café' },
-  { key: 'coral', value: '#b5544a', label: 'Coral queimado' },
-  { key: 'ardosia', value: '#4f5b6b', label: 'Ardósia' },
-  { key: 'ocre', value: '#a68a2e', label: 'Ocre' },
-  { key: 'esmeralda', value: '#1f6b52', label: 'Esmeralda' },
-  { key: 'cobalto', value: '#35578a', label: 'Cobalto' },
-  { key: 'salmao', value: '#9c6b5a', label: 'Salmão queimado' },
+// Paleta "joia sobre papel": 24 tons vivos e bem espaçados na roda de cor,
+// cada um com uma variante pro tema claro (mais escura, lê bem no papel
+// bege) e uma pro escuro (mais clara, lê bem no papel quase preto) — checado
+// contra as duas cores de fundo do DESIGN.md (contraste ≥3:1 nos dois).
+// `value` é o que fica salvo na categoria; `dark` só existe no front, é
+// resolvido em tempo real pelo tema atual (ver categoryStyle).
+export const COLOR_OPTIONS: { key: string; value: string; dark: string; label: string }[] = [
+  { key: 'rubi', value: '#bc2f46', dark: '#d87989', label: 'Rubi' },
+  { key: 'laranja-queimado', value: '#c65c2f', dark: '#da9577', label: 'Laranja-queimado' },
+  { key: 'ambar', value: '#9c6d1c', dark: '#e1b770', label: 'Âmbar' },
+  { key: 'ouro-velho', value: '#8b711d', dark: '#dac16c', label: 'Ouro-velho' },
+  { key: 'oliva', value: '#737e25', dark: '#c2cf6e', label: 'Oliva' },
+  { key: 'verde-limao', value: '#648a38', dark: '#a5c581', label: 'Verde-limão' },
+  { key: 'esmeralda', value: '#309164', dark: '#72caa1', label: 'Esmeralda' },
+  { key: 'jade', value: '#328f7d', dark: '#74c8b7', label: 'Jade' },
+  { key: 'turquesa', value: '#23848b', dark: '#71cfd6', label: 'Turquesa' },
+  { key: 'ciano-petroleo', value: '#2e849e', dark: '#7dbfd4', label: 'Ciano-petróleo' },
+  { key: 'azul-cobalto', value: '#3776be', dark: '#8cb0d9', label: 'Azul-cobalto' },
+  { key: 'azul-royal', value: '#395fc6', dark: '#94a7db', label: 'Azul-royal' },
+  { key: 'indigo', value: '#4642bd', dark: '#a2a0d9', label: 'Índigo' },
+  { key: 'violeta', value: '#764ebc', dark: '#b6a2d7', label: 'Violeta' },
+  { key: 'roxo-ametista', value: '#8847ae', dark: '#bf9dd2', label: 'Roxo-ametista' },
+  { key: 'magenta', value: '#b83d9f', dark: '#d590c7', label: 'Magenta' },
+  { key: 'framboesa', value: '#be377a', dark: '#d98cb2', label: 'Framboesa' },
+  { key: 'rosa-antigo', value: '#bc5c7c', dark: '#d29daf', label: 'Rosa-antigo' },
+  { key: 'bordo', value: '#8e292d', dark: '#cf6e71', label: 'Bordô' },
+  { key: 'terracota', value: '#b65335', dark: '#d69885', label: 'Terracota' },
+  { key: 'sienna', value: '#995c33', dark: '#cd9b7a', label: 'Sienna' },
+  { key: 'caramelo', value: '#a66f30', dark: '#d4ab7d', label: 'Caramelo' },
+  { key: 'grafite-azulado', value: '#52667a', dark: '#93a8be', label: 'Grafite-azulado' },
+  { key: 'verde-musgo', value: '#557c3c', dark: '#98bb81', label: 'Verde-musgo' },
 ];
+
+const COLOR_MAP: Record<string, { value: string; dark: string }> = Object.fromEntries(
+  COLOR_OPTIONS.map((o) => [o.value, { value: o.value, dark: o.dark }])
+);
 
 // Categorias que o app cria sozinho na primeira vez que alguém abre (mesmo
 // padrão do "Conta Corrente" auto-criada em Accounts) — dá pra renomear,
 // trocar cor/ícone ou apagar depois, isso é só o ponto de partida.
 export const DEFAULT_CATEGORIES: { name: string; icon: string; color: string }[] = [
-  { name: 'Alimentação', icon: 'utensils', color: '#b08628' },
-  { name: 'Moradia', icon: 'house', color: '#2b4c7e' },
-  { name: 'Lazer', icon: 'gamepad', color: '#8b5a83' },
-  { name: 'Transporte', icon: 'car', color: '#3e8a88' },
-  { name: 'Salário', icon: 'banknote', color: '#2f6f4e' },
-  { name: 'Freela', icon: 'briefcase', color: '#a8623c' },
-  { name: 'Outros', icon: 'tag', color: '#6b7260' },
+  { name: 'Alimentação', icon: 'utensils', color: '#a66f30' },
+  { name: 'Moradia', icon: 'house', color: '#3776be' },
+  { name: 'Lazer', icon: 'gamepad', color: '#8847ae' },
+  { name: 'Transporte', icon: 'car', color: '#23848b' },
+  { name: 'Salário', icon: 'banknote', color: '#309164' },
+  { name: 'Freela', icon: 'briefcase', color: '#b65335' },
+  { name: 'Outros', icon: 'tag', color: '#52667a' },
 ];
 
-const FALLBACK = { icon: Tag, color: '#6b7260' };
+const FALLBACK = { value: '#6b7260', dark: '#9ca28d' };
 
-/** Ícone/cor de uma categoria pelo nome salvo na transação — cai num selo
- * neutro quando o nome não bate com nenhuma categoria cadastrada (categoria
- * renomeada ou apagada depois que a transação já existia). */
-export const categoryStyle = (categories: Category[], name: string): { icon: LucideIcon; color: string } => {
+/** Ícone/cor de uma categoria pelo nome salvo na transação, já resolvidos
+ * pro tema atual — cai num selo neutro quando o nome não bate com nenhuma
+ * categoria cadastrada (categoria renomeada ou apagada depois que a
+ * transação já existia). */
+export const categoryStyle = (
+  categories: Category[],
+  name: string,
+  theme: Theme
+): { icon: LucideIcon; color: string } => {
   // Sem diferenciar maiúsculas/acentuação de caixa: "ENERGIA" e "Energia"
   // são a mesma categoria pra quem olha a tela, mesmo que o texto salvo em
   // transações antigas tenha vindo digitado diferente.
   const key = name.trim().toLowerCase();
   const found = categories.find((c) => c.name.trim().toLowerCase() === key);
-  if (!found) return FALLBACK;
-  return { icon: ICON_MAP[found.icon] ?? Tag, color: found.color };
+  const pair = (found && COLOR_MAP[found.color]) || FALLBACK;
+  const icon = (found && ICON_MAP[found.icon]) || Tag;
+  return { icon, color: theme === 'dark' ? pair.dark : pair.value };
 };

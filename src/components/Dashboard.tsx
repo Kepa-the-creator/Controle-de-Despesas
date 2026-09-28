@@ -733,7 +733,7 @@ export function Dashboard() {
  const iconBtn = 'p-2.5 -m-1 rounded-sm text-ink-soft transition-colors cursor-pointer';
 
  const renderTxRow = (tx: Transaction) => {
- const { icon: CatIcon, color } = categoryStyle(categories, tx.category);
+ const { icon: CatIcon, color } = categoryStyle(categories, tx.category, theme);
  return (
  <li key={tx.id} className="flex items-start justify-between gap-3 px-4 sm:px-5 py-3 hover:bg-paper-hover transition-colors">
  <div
@@ -1423,6 +1423,7 @@ export function Dashboard() {
  onChange={setFixedExpenses}
  accounts={accounts}
  categories={categories}
+ theme={theme}
  onClose={() => setIsFixedExpensesOpen(false)}
  />
  )}
@@ -1441,6 +1442,7 @@ export function Dashboard() {
  <Categories
  categories={categories}
  onChange={setCategories}
+ theme={theme}
  onClose={() => setIsCategoriesOpen(false)}
  />
  )}
@@ -1451,6 +1453,7 @@ export function Dashboard() {
  onChange={setCategoryBudgets}
  monthTransactions={monthTransactions}
  categories={categories}
+ theme={theme}
  onClose={() => setIsCategoryBudgetsOpen(false)}
  />
  )}

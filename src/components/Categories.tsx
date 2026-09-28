@@ -3,12 +3,22 @@ import { Plus, Trash2, Tags, X, Pencil, Check } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import { toast } from '../lib/toast';
 import { ICON_OPTIONS, COLOR_OPTIONS, type Category } from '../lib/categories';
+import type { Theme } from '../hooks/useTheme';
 
 interface CategoriesProps {
   categories: Category[];
   onChange: (list: Category[]) => void;
+  theme: Theme;
   onClose: () => void;
 }
+
+// A categoria guarda sempre o tom "claro" (a fonte da verdade); pra mostrar
+// o selo com a cor certa no tema escuro, resolve pro par mais vivo daquele
+// tom — mesma lógica de categoryStyle, só que a partir do hex direto.
+const resolveSwatch = (hex: string, theme: Theme) => {
+  if (theme !== 'dark') return hex;
+  return COLOR_OPTIONS.find((o) => o.value === hex)?.dark ?? hex;
+};
 
 // Grade de ícones/cores reaproveitada no criar e no editar — evita repetir
 // o mesmo markup duas vezes.
@@ -34,30 +44,33 @@ function IconPicker({ value, onChange }: { value: string; onChange: (key: string
   );
 }
 
-function ColorPicker({ value, onChange }: { value: string; onChange: (hex: string) => void }) {
+function ColorPicker({ value, onChange, theme }: { value: string; onChange: (hex: string) => void; theme: Theme }) {
   return (
     <div className="grid grid-cols-6 gap-1.5">
-      {COLOR_OPTIONS.map(({ key, value: hex, label }) => (
-        <button
-          key={key}
-          type="button"
-          onClick={() => onChange(hex)}
-          title={label}
-          aria-label={label}
-          aria-pressed={value === hex}
-          className={`aspect-square rounded-sm border-2 transition-transform cursor-pointer ${
-            value === hex ? 'scale-90' : 'border-transparent hover:scale-95'
-          }`}
-          style={{ backgroundColor: hex, borderColor: value === hex ? hex : 'transparent' }}
-        >
-          {value === hex && <Check className="w-4 h-4 text-paper mx-auto" />}
-        </button>
-      ))}
+      {COLOR_OPTIONS.map(({ key, value: hex, dark, label }) => {
+        const swatch = theme === 'dark' ? dark : hex;
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onChange(hex)}
+            title={label}
+            aria-label={label}
+            aria-pressed={value === hex}
+            className={`aspect-square rounded-sm border-2 transition-transform cursor-pointer ${
+              value === hex ? 'scale-90' : 'border-transparent hover:scale-95'
+            }`}
+            style={{ backgroundColor: swatch, borderColor: value === hex ? swatch : 'transparent' }}
+          >
+            {value === hex && <Check className="w-4 h-4 text-paper mx-auto" />}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-export function Categories({ categories, onChange, onClose }: CategoriesProps) {
+export function Categories({ categories, onChange, theme, onClose }: CategoriesProps) {
   const [name, setName] = useState('');
   const [icon, setIcon] = useState(ICON_OPTIONS[0].key);
   const [color, setColor] = useState(COLOR_OPTIONS[0].value);
@@ -159,7 +172,7 @@ export function Categories({ categories, onChange, onClose }: CategoriesProps) {
                     className="w-full bg-paper-raised border border-rule rounded-md px-2.5 py-1.5 text-sm text-ink focus:outline-none focus:border-accent"
                   />
                   <IconPicker value={editingIcon} onChange={setEditingIcon} />
-                  <ColorPicker value={editingColor} onChange={setEditingColor} />
+                  <ColorPicker value={editingColor} onChange={setEditingColor} theme={theme} />
                   <div className="flex items-center gap-2 pt-1">
                     <button
                       type="button"
@@ -182,7 +195,7 @@ export function Categories({ categories, onChange, onClose }: CategoriesProps) {
                   <div className="flex items-center gap-3 min-w-0">
                     <div
                       className="w-9 h-9 rounded-sm border flex items-center justify-center shrink-0"
-                      style={{ borderColor: cat.color, color: cat.color }}
+                      style={{ borderColor: resolveSwatch(cat.color, theme), color: resolveSwatch(cat.color, theme) }}
                     >
                       <CatIcon className="w-4.5 h-4.5" />
                     </div>
@@ -233,7 +246,7 @@ export function Categories({ categories, onChange, onClose }: CategoriesProps) {
           </div>
           <div>
             <p className="block text-xs font-medium text-ink-soft mb-1">Cor</p>
-            <ColorPicker value={color} onChange={setColor} />
+            <ColorPicker value={color} onChange={setColor} theme={theme} />
           </div>
           <button
             type="submit"

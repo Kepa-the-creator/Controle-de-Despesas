@@ -4,6 +4,7 @@ import { pb } from '../services/pocketbase';
 import type { Transaction } from './Dashboard';
 import { toast } from '../lib/toast';
 import { categoryStyle, type Category } from '../lib/categories';
+import type { Theme } from '../hooks/useTheme';
 
 export interface CategoryBudget {
  id: string;
@@ -16,13 +17,14 @@ interface CategoryBudgetsProps {
  onChange: (list: CategoryBudget[]) => void;
  monthTransactions: Transaction[];
  categories: Category[];
+ theme: Theme;
  onClose: () => void;
 }
 
 const formatCurrency = (val: number) =>
  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
-export function CategoryBudgets({ budgets, onChange, monthTransactions, categories, onClose }: CategoryBudgetsProps) {
+export function CategoryBudgets({ budgets, onChange, monthTransactions, categories, theme, onClose }: CategoryBudgetsProps) {
  const [category, setCategory] = useState('');
  // Cai pra primeira categoria carregada até a pessoa escolher outra —
  // sem efeito, só o valor mostrado/enviado enquanto `category` está vazio.
@@ -94,7 +96,7 @@ export function CategoryBudgets({ budgets, onChange, monthTransactions, categori
  <div key={b.id} className="bg-paper border border-rule rounded-md px-4 py-3">
  <div className="flex items-center justify-between mb-1.5">
  {(() => {
- const { icon: CatIcon, color } = categoryStyle(categories, b.category);
+ const { icon: CatIcon, color } = categoryStyle(categories, b.category, theme);
  return (
  <span className="text-sm font-medium text-ink flex items-center gap-1.5" style={{ color }}>
  <CatIcon className="w-4 h-4" /> {b.category}

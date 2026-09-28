@@ -37,7 +37,7 @@ export function CategoryChart({ transactions, categories, theme }: CategoryChart
           <PieChart>
             <Pie data={data} dataKey="value" nameKey="name" innerRadius={60} outerRadius={95} paddingAngle={2}>
               {data.map((entry, i) => (
-                <Cell key={i} fill={categoryStyle(categories, entry.name).color} stroke="none" />
+                <Cell key={i} fill={categoryStyle(categories, entry.name, theme).color} stroke="none" />
               ))}
             </Pie>
             <Tooltip

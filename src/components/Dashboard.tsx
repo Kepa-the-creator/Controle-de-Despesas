@@ -20,6 +20,8 @@ import {
  Tags,
  Paperclip,
  X,
+ Newspaper,
+ ExternalLink,
 } from 'lucide-react';
 import { pb } from '../services/pocketbase';
 import { useAuth } from '../hooks/useAuth';
@@ -69,6 +71,17 @@ export interface Transfer {
  description?: string;
 }
 
+// Alimentada por um workflow externo (n8n), não por este app — só leitura
+// aqui, sem formulário de criação.
+export interface MarketNews {
+ id: string;
+ title: string;
+ url: string;
+ source: string;
+ summary?: string;
+ publishedAt: string;
+}
+
 const sortByDateDesc = (list: Transaction[]) =>
  [...list].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 
@@ -102,6 +115,7 @@ export function Dashboard() {
  const [isHelpOpen, setIsHelpOpen] = useState(false);
  const [accounts, setAccounts] = useState<Account[]>([]);
  const [transfers, setTransfers] = useState<Transfer[]>([]);
+ const [marketNews, setMarketNews] = useState<MarketNews[]>([]);
  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
  const [mobileTab, setMobileTab] = useState<'income' | 'expense'>('expense');
  const [cursor, setCursor] = useState(() => {
@@ -286,6 +300,29 @@ export function Dashboard() {
  return () => {
  active = false;
  unsubscribePromise.then((unsubscribe) => unsubscribe());
+ };
+ }, []);
+
+ // Busca as últimas notícias de mercado — coleção alimentada por um
+ // workflow externo (n8n), não por este app; só leitura, sem assinatura em
+ // tempo real (não é informação que precisa aparecer no segundo em que é
+ // publicada).
+ useEffect(() => {
+ let active = true;
+
+ (async () => {
+ try {
+ const result = await pb.collection('market_news').getList<MarketNews>(1, 5, {
+ sort: '-publishedAt',
+ });
+ if (active) setMarketNews(result.items);
+ } catch (err: any) {
+ console.error('Erro ao buscar notícias:', err.message);
+ }
+ })();
+
+ return () => {
+ active = false;
  };
  }, []);
 
@@ -1135,6 +1172,41 @@ export function Dashboard() {
  )}
  </div>
  </div>
+
+ {marketNews.length > 0 && (
+ <section className="rounded-md overflow-hidden border-2 border-rule bg-paper-raised">
+ <div className="p-4 sm:p-5 flex items-center gap-3 border-b border-rule">
+ <div className="p-2 rounded-sm bg-accent-soft text-accent">
+ <Newspaper className="w-5 h-5" />
+ </div>
+ <h2 className="text-base sm:text-lg font-semibold text-ink">Notícias do mercado</h2>
+ </div>
+ <ul className="divide-y divide-rule">
+ {marketNews.map((news) => (
+ <li key={news.id}>
+ <a
+ href={news.url}
+ target="_blank"
+ rel="noreferrer"
+ className="flex items-start justify-between gap-3 px-4 sm:px-5 py-3 hover:bg-paper-hover transition-colors"
+ >
+ <div className="min-w-0">
+ <p className="text-sm font-medium text-ink">{news.title}</p>
+ {news.summary && (
+ <p className="text-xs text-ink-soft mt-1 line-clamp-2">{news.summary}</p>
+ )}
+ <div className="flex items-center gap-2 mt-1.5">
+ <span className="text-[11px] text-ink-soft">{news.source}</span>
+ <span className="text-[11px] tabular text-ink-soft">{shortDate(news.publishedAt)}</span>
+ </div>
+ </div>
+ <ExternalLink className="w-4 h-4 text-ink-soft shrink-0 mt-0.5" aria-hidden="true" />
+ </a>
+ </li>
+ ))}
+ </ul>
+ </section>
+ )}
 
  {/* Entradas e saídas */}
  <div className="md:hidden grid grid-cols-2 gap-2 p-1 bg-paper-raised border border-rule rounded-md">

@@ -393,7 +393,7 @@ export function Dashboard() {
  const day = Math.min(fe.dayOfMonth, daysInMonth(cursor.year, cursor.month));
  const targetDate = `${cursor.year}-${String(cursor.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
  try {
- await pb.collection('transactions').create({
+ const created = await pb.collection('transactions').create<Transaction>({
  description: fe.description,
  amount: fe.amount,
  type: fe.type,
@@ -404,6 +404,10 @@ export function Dashboard() {
  user: pb.authStore.record?.id,
  recurringSource: fe.id,
  });
+ // Atualiza o estado local na hora em vez de esperar o evento em tempo
+ // real do PocketBase — se o SSE atrasar ou cair, o card de
+ // Entradas/Saídas não fica preso mostrando o mês desatualizado.
+ setTransactions((prev) => (prev.some((t) => t.id === created.id) ? prev : sortByDateDesc([created, ...prev])));
  } catch (err: any) {
  console.error('Erro ao gerar despesa fixa:', err.message);
  generatingRef.current.delete(key);
@@ -412,7 +416,10 @@ export function Dashboard() {
  })();
  }, [cursor, fixedExpenses, transactions, loading]);
 
- // Cadastrar ou editar no banco (o estado é atualizado via assinatura em tempo real)
+ // Cadastrar ou editar no banco: atualiza o estado local na hora com o
+ // registro retornado pelo PocketBase, sem depender só da assinatura em
+ // tempo real (que continua existindo pra refletir mudanças feitas em
+ // outra aba/sessão)
  const handleAddTransaction = async (e: React.FormEvent) => {
  e.preventDefault();
  if (!amount) return;
@@ -426,13 +433,14 @@ export function Dashboard() {
  return;
  }
  try {
- await pb.collection('transfers').update(editingTransferId, {
+ const updated = await pb.collection('transfers').update<Transfer>(editingTransferId, {
  fromAccount: fromAccountId,
  toAccount: toAccountId,
  amount: totalAmount,
  date,
  description: description || undefined,
  });
+ setTransfers((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
  closeModal();
  } catch (err: any) {
  toast.error('Erro ao salvar transferência: ' + err.message);
@@ -443,7 +451,7 @@ export function Dashboard() {
  if (editingId) {
  if (!description) return;
  try {
- await pb.collection('transactions').update(editingId, {
+ const updated = await pb.collection('transactions').update<Transaction>(editingId, {
  description,
  amount: totalAmount,
  type: formMode === 'transfer' ? 'expense' : formMode,
@@ -455,6 +463,7 @@ export function Dashboard() {
  // nada, o arquivo já salvo continua intacto.
  ...(removeReceipt ? { receipt: null } : receiptFile ? { receipt: receiptFile } : {}),
  });
+ setTransactions((prev) => sortByDateDesc(prev.map((t) => (t.id === updated.id ? updated : t))));
  closeModal();
  } catch (err: any) {
  toast.error('Erro ao salvar alterações: ' + err.message);
@@ -472,7 +481,7 @@ export function Dashboard() {
  return;
  }
  try {
- await pb.collection('transfers').create<Transfer>({
+ const created = await pb.collection('transfers').create<Transfer>({
  fromAccount: fromAccountId,
  toAccount: toAccountId,
  amount: totalAmount,
@@ -480,6 +489,7 @@ export function Dashboard() {
  description: description || undefined,
  user: pb.authStore.record?.id,
  });
+ setTransfers((prev) => (prev.some((t) => t.id === created.id) ? prev : [created, ...prev]));
  closeModal();
  } catch (err: any) {
  toast.error('Erro ao registrar transferência: ' + err.message);
@@ -496,7 +506,7 @@ export function Dashboard() {
 
  try {
  if (installments === 1) {
- await pb.collection('transactions').create({
+ const created = await pb.collection('transactions').create<Transaction>({
  description,
  amount: totalAmount,
  type: formMode,
@@ -507,6 +517,7 @@ export function Dashboard() {
  user: pb.authStore.record?.id,
  ...(receiptFile ? { receipt: receiptFile } : {}),
  });
+ setTransactions((prev) => (prev.some((t) => t.id === created.id) ? prev : sortByDateDesc([created, ...prev])));
  } else {
  // Divide em centavos e distribui o resto pelas primeiras parcelas
  // (método do maior resto) — evita drift de ponto flutuante e garante
@@ -515,10 +526,11 @@ export function Dashboard() {
  const totalCents = Math.round(totalAmount * 100);
  const baseCents = Math.floor(totalCents / installments);
  const remainderCents = totalCents - baseCents * installments;
+ const createdInstallments: Transaction[] = [];
 
  for (let i = 0; i < installments; i++) {
  const cents = baseCents + (i < remainderCents ? 1 : 0);
- await pb.collection('transactions').create({
+ const created = await pb.collection('transactions').create<Transaction>({
  description,
  amount: cents / 100,
  type: formMode,
@@ -534,7 +546,9 @@ export function Dashboard() {
  // dividida; assim dá pra abrir o recibo a partir de qualquer uma.
  ...(receiptFile ? { receipt: receiptFile } : {}),
  });
+ createdInstallments.push(created);
  }
+ setTransactions((prev) => sortByDateDesc([...createdInstallments, ...prev]));
  }
 
  closeModal();
@@ -594,15 +608,19 @@ export function Dashboard() {
  if (!window.confirm('Excluir esta transferência? Isso muda o saldo das duas contas envolvidas.')) return;
  try {
  await pb.collection('transfers').delete(id);
+ setTransfers((prev) => prev.filter((t) => t.id !== id));
  } catch (err: any) {
  toast.error('Erro ao excluir transferência: ' + err.message);
  }
  };
 
- // Excluir do banco (o estado é atualizado via assinatura em tempo real)
+ // Excluir do banco e atualizar o estado local na hora (não depende só da
+ // assinatura em tempo real, que serve pra refletir mudanças feitas em
+ // outra aba/sessão)
  const handleDelete = async (id: string) => {
  try {
  await pb.collection('transactions').delete(id);
+ setTransactions((prev) => prev.filter((t) => t.id !== id));
  } catch (err: any) {
  toast.error('Erro ao excluir: ' + err.message);
  }
@@ -892,6 +910,20 @@ export function Dashboard() {
  const spentPct = summary.income > 0 ? (summary.expense / summary.income) * 100 : summary.expense > 0 ? 100 : 0;
  const spentBarColor = spentPct >= 100 ? 'bg-expense' : spentPct >= 80 ? 'bg-warning' : 'bg-income';
 
+ // Status dos orçamentos do mês visível, pra mostrar direto no Hub — sem
+ // isso, só dava pra ver o quanto já tinha sido gasto de cada limite
+ // abrindo o modal de Orçamento.
+ const budgetStatus = useMemo(
+ () =>
+ categoryBudgets.map((b) => {
+ const spent = monthTransactions
+ .filter((t) => t.type === 'expense' && t.category === b.category)
+ .reduce((sum, t) => sum + Number(t.amount), 0);
+ return { budget: b, spent, pct: b.limit > 0 ? Math.min(100, (spent / b.limit) * 100) : 0 };
+ }),
+ [categoryBudgets, monthTransactions]
+ );
+
  return (
  <div className="min-h-screen bg-paper text-ink font-sans antialiased p-4 md:p-8 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(5.5rem,env(safe-area-inset-bottom))] sm:pb-8">
  <div className="max-w-6xl mx-auto space-y-8 sm:border-2 sm:border-rule sm:rounded-3xl sm:p-6 sm:shadow-sm">
@@ -1061,7 +1093,47 @@ export function Dashboard() {
  theme={theme}
  />
  </div>
+ <div className="space-y-5">
  <CategoryChart transactions={monthTransactions} categories={categories} theme={theme} />
+ {budgetStatus.length > 0 && (
+ <div className="bg-paper-raised border border-rule rounded-md p-6">
+ <div className="flex items-center justify-between mb-4">
+ <h2 className="text-lg font-semibold text-ink">Orçamento do mês</h2>
+ <button
+ type="button"
+ onClick={() => setIsCategoryBudgetsOpen(true)}
+ className="p-1.5 -m-1.5 rounded-sm text-ink-soft hover:text-accent hover:bg-accent-soft transition-colors cursor-pointer"
+ aria-label="Gerenciar orçamentos"
+ title="Gerenciar orçamentos"
+ >
+ <Gauge className="w-4 h-4" />
+ </button>
+ </div>
+ <ul className="space-y-3">
+ {budgetStatus.map(({ budget, spent, pct }) => {
+ const { icon: CatIcon, color } = categoryStyle(categories, budget.category, theme);
+ const barColor = pct >= 100 ? 'bg-expense' : pct >= 80 ? 'bg-warning' : 'bg-income';
+ return (
+ <li key={budget.id}>
+ <div className="flex items-center justify-between gap-2 mb-1.5">
+ <span className="text-sm font-medium text-ink flex items-center gap-1.5 min-w-0" style={{ color }}>
+ <CatIcon className="w-4 h-4 shrink-0" />
+ <span className="truncate">{budget.category}</span>
+ </span>
+ <span className="text-xs tabular text-ink-soft shrink-0">
+ {formatCurrency(spent)} / {formatCurrency(budget.limit)}
+ </span>
+ </div>
+ <div className="w-full h-2 rounded-full bg-paper-hover overflow-hidden">
+ <div className={`h-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
+ </div>
+ </li>
+ );
+ })}
+ </ul>
+ </div>
+ )}
+ </div>
  </div>
 
  {/* Entradas e saídas */}
